@@ -1,7 +1,7 @@
 Package: clusterProfiler
 Type: Package
 Title: A universal enrichment tool for interpreting omics data
-Version: 4.19.1.01
+Version: 4.19.2
 Authors@R: c(
     person(given = "Guangchuang", family = "Yu",        email = "guangchuangyu@gmail.com",   role  = c("aut", "cre", "cph"), comment = c(ORCID = "0000-0002-6485-8781")),
     person(given = "Li-Gen",      family = "Wang",      email = "reeganwang020@gmail.com",   role  = "ctb"),
@@ -40,15 +40,13 @@ Imports:
     yulab.utils (>= 0.1.6)
 Suggests:
     AnnotationHub,
-    knitr,
+    BiocManager,
     jsonlite,
     readr,
-    rmarkdown,
     org.Hs.eg.db,
-    prettydoc,
-    BiocManager,
+    quarto,
     testthat
-VignetteBuilder: knitr
+VignetteBuilder: quarto
 ByteCompile: true
 License: Artistic-2.0
 URL: https://yulab-smu.top/contribution-knowledge-mining/

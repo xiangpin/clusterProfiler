@@ -11,7 +11,7 @@
 ##' @param readable if readable is TRUE, the gene IDs will mapping to gene
 ##'   symbols.
 ##' @return A \code{groupGOResult} instance.
-##' @seealso \code{\link{groupGOResult-class}}, \code{\link{compareCluster}}
+##' @seealso [groupGOResult-class], [compareCluster]
 ##' @keywords manip
 ##' @importFrom methods new
 ##' @importClassesFrom methods data.frame

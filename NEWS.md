@@ -13,7 +13,8 @@ TODO:
 
 # clusterProfiler 4.19.2
 
-+ update KEGG cache data (2025-11-20, Thu)
++ use 'quarto' as vignette engine (2025-11-20, Thu)
++ update KEGG cache data (2025-11-20, Thu, #792)
   - number of KEGG pathway with category information: 582
   - Number of species: 11344
 

@@ -1,28 +1,21 @@
 ---
 title: "Statistical analysis and visualization of functional profiles for genes and gene clusters"
-author: 
-- name: Guangchuang Yu
-  email: guangchuangyu@gmail.com
-  affiliation: Department of Bioinformatics, School of Basic Medical Sciences, Southern Medical University
+format: 
+    html:
+        theme: none
+        embed-resources: true
+        fontsize: 1.1em
+        linestretch: 1.7
+author: "Guangchuang Yu\\
+
+        School of Basic Medical Sciences, Southern Medical University"
 date: "`r Sys.Date()`"
-output:
-  prettydoc::html_pretty:
-    theme: cayman
-    highlight: github
-  pdf_document:
-    toc: true
 vignette: >
   %\VignetteIndexEntry{Statistical analysis and visualization of functional profiles for genes and gene clusters}
-  %\VignetteEngine{knitr::rmarkdown}
-  %\usepackage[utf8]{inputenc}
+  %\VignetteEngine{quarto::html}
   %\VignetteEncoding{UTF-8}
 ---
 
-```{r style, echo=FALSE, results="asis", message=FALSE}
-knitr::opts_chunk$set(tidy = FALSE,
-                      warning = FALSE,
-                      message = FALSE)
-```
 
 # Overview
 
