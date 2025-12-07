@@ -1,12 +1,12 @@
-##' add KEGG pathway category information
-##'
-##' This function appends the KEGG pathway category information to KEGG enrichment result 
-##' (either output of 'enrichKEGG' or 'gseKEGG'
-##' @title append_kegg_category
-##' @param x KEGG enrichment result
-##' @return update KEGG enrichment result with category information
-##' @export
-##' @author Guangchuang Yu
+#' add KEGG pathway category information
+#'
+#' This function appends the KEGG pathway category information to KEGG enrichment result 
+#' (either output of 'enrichKEGG' or 'gseKEGG'
+#' @title append_kegg_category
+#' @param x KEGG enrichment result
+#' @return update KEGG enrichment result with category information
+#' @export
+#' @author Guangchuang Yu
 append_kegg_category <- function(x) {
     if (inherits(x, "enrichResult")) {
         type <- x@ontology
@@ -30,33 +30,33 @@ append_kegg_category <- function(x) {
     return(x)
 }
 
-##' open KEGG pathway with web browser
-##'
-##'
-##' @title browseKEGG
-##' @param x an instance of enrichResult or gseaResult
-##' @param pathID pathway ID
-##' @return url
-##' @importFrom utils browseURL
-##' @export
-##' @author Guangchuang Yu
+#' open KEGG pathway with web browser
+#'
+#'
+#' @title browseKEGG
+#' @param x an instance of enrichResult or gseaResult
+#' @param pathID pathway ID
+#' @return url
+#' @importFrom utils browseURL
+#' @export
+#' @author Guangchuang Yu
 browseKEGG <- function(x, pathID) {
     url <- paste0("https://www.kegg.jp/kegg-bin/show_pathway?", pathID, '/', x[pathID, "geneID"])
     browseURL(url)
     invisible(url)
 }
 
-##' search kegg organism, listed in https://www.genome.jp/kegg/catalog/org_list.html
-##'
-##'
-##' @title search_kegg_organism
-##' @param str string
-##' @param by one of 'kegg.code', 'scientific_name' and 'common_name'
-##' @param ignore.case TRUE or FALSE
-##' @param use_internal_data logical, use kegg_species.rda or latest online KEGG data
-##' @return data.frame
-##' @export
-##' @author Guangchuang Yu
+#' search kegg organism, listed in https://www.genome.jp/kegg/catalog/org_list.html
+#'
+#'
+#' @title search_kegg_organism
+#' @param str string
+#' @param by one of 'kegg.code', 'scientific_name' and 'common_name'
+#' @param ignore.case TRUE or FALSE
+#' @param use_internal_data logical, use kegg_species.rda or latest online KEGG data
+#' @return data.frame
+#' @export
+#' @author Guangchuang Yu
 search_kegg_organism <- function(str, by="scientific_name", ignore.case=FALSE, 
                                  use_internal_data = TRUE) {
     if (use_internal_data) {
@@ -153,7 +153,7 @@ get_kegg_species <- function(save = FALSE) {
 ##     }))
 ## }
 
-##' @importFrom yulab.utils yread
+#' @importFrom yulab.utils yread
 kegg_rest <- function(rest_url) {
     message('Reading KEGG annotation online: "', rest_url, '"...')
 
@@ -194,14 +194,14 @@ kegg_list <- function(db, species = NULL) {
     kegg_rest(url)
 }
 
-##' convert ko ID to descriptive name
-##'
-##'
-##' @title ko2name
-##' @param ko ko ID
-##' @return data.frame
-##' @export
-##' @author guangchuang yu
+#' convert ko ID to descriptive name
+#'
+#'
+#' @title ko2name
+#' @param ko ko ID
+#' @return data.frame
+#' @export
+#' @author guangchuang yu
 ko2name <- function(ko) {
     p <- kegg_list('pathway')
     ko2 <- gsub("^ko", "path:map", ko)

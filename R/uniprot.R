@@ -1,18 +1,18 @@
-##' retreve annotation data from uniprot
-##'
-##'
-##' @title uniprot_get
-##' @param taxID taxonomy ID
-##' @return gene table data frame
-##' @export
-##' @author guangchuang yu
+#' retreve annotation data from uniprot
+#'
+#'
+#' @title uniprot_get
+#' @param taxID taxonomy ID
+#' @return gene table data frame
+#' @export
+#' @author guangchuang yu
 uniprot_get <- function(taxID) {
     url <- paste("http://www.uniprot.org/uniprot/?query=taxonomy%3a", taxID,
                  "&force=yes&format=txt", sep="", collapse="")
     parseEmbl(url)
 }
 
-##' @importFrom plyr ldply
+#' @importFrom plyr ldply
 parseEmbl <- function(file) {
     x <- readLines(file)
     idx <- grep("^//", x)

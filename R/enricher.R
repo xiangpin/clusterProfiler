@@ -1,22 +1,22 @@
-##' A universal enrichment analyzer
-##'
-##'
-##' @title enricher
-##' @param gene a vector of gene id
-##' @param pvalueCutoff adjusted pvalue cutoff on enrichment tests to report
-##' @param pAdjustMethod  one of "holm", "hochberg", "hommel", "bonferroni", "BH", "BY", "fdr", "none"
-##' @param universe background genes. If missing, the all genes listed in the database (eg TERM2GENE table) will be used as background.
-##' @param minGSSize minimal size of genes annotated for testing
-##' @param maxGSSize maximal size of genes annotated for testing
-##' @param qvalueCutoff qvalue cutoff on enrichment tests to report as significant.  Tests must pass i) \code{pvalueCutoff} on unadjusted pvalues, ii) \code{pvalueCutoff} on adjusted pvalues and iii) \code{qvalueCutoff} on qvalues to be reported.
-##' @param gson a GSON object, if not NULL, use it as annotation data. 
-##' @param TERM2GENE user input annotation of TERM TO GENE mapping, a data.frame of 2 column with term and gene.
-##' Only used when gson is NULL.
-##' @param TERM2NAME user input of TERM TO NAME mapping, a data.frame of 2 column with term and name.
-##' Only used when gson is NULL.
-##' @return A \code{enrichResult} instance
-##' @author Guangchuang Yu \url{https://yulab-smu.top}
-##' @export
+#' A universal enrichment analyzer
+#'
+#'
+#' @title enricher
+#' @param gene a vector of gene id
+#' @param pvalueCutoff adjusted pvalue cutoff on enrichment tests to report
+#' @param pAdjustMethod  one of "holm", "hochberg", "hommel", "bonferroni", "BH", "BY", "fdr", "none"
+#' @param universe background genes. If missing, the all genes listed in the database (eg TERM2GENE table) will be used as background.
+#' @param minGSSize minimal size of genes annotated for testing
+#' @param maxGSSize maximal size of genes annotated for testing
+#' @param qvalueCutoff qvalue cutoff on enrichment tests to report as significant.  Tests must pass i) \code{pvalueCutoff} on unadjusted pvalues, ii) \code{pvalueCutoff} on adjusted pvalues and iii) \code{qvalueCutoff} on qvalues to be reported.
+#' @param gson a GSON object, if not NULL, use it as annotation data. 
+#' @param TERM2GENE user input annotation of TERM TO GENE mapping, a data.frame of 2 column with term and gene.
+#' Only used when gson is NULL.
+#' @param TERM2NAME user input of TERM TO NAME mapping, a data.frame of 2 column with term and name.
+#' Only used when gson is NULL.
+#' @return A \code{enrichResult} instance
+#' @author Guangchuang Yu \url{https://yulab-smu.top}
+#' @export
 enricher <- function(gene,
                      pvalueCutoff = 0.05,
                      pAdjustMethod = "BH",
@@ -30,21 +30,38 @@ enricher <- function(gene,
                      ) {
     if (inherits(gson, 'GSONList')) {
         res <- lapply(gson, function(USER_DATA) {
-                enricher_internal(gene = gene,
+                enrichit::ora_gson(gene = gene,
                       pvalueCutoff = pvalueCutoff,
                       pAdjustMethod = pAdjustMethod,
                       universe = universe,
                       minGSSize = minGSSize,
                       maxGSSize = maxGSSize,
                       qvalueCutoff = qvalueCutoff,
-                      USER_DATA = USER_DATA)
+                      gson = USER_DATA)
         })
         class(res) <- "enrichResultList"
         return(res)
     }
 
     if (is.null(gson)) {
-        USER_DATA <- build_Anno(TERM2GENE, TERM2NAME)
+        # USER_DATA <- build_Anno(TERM2GENE, TERM2NAME)
+        gsid2gene <- TERM2GENE
+        colnames(gsid2gene) <- c("gsid", "gene")
+        
+        if (missing(TERM2NAME) || is.null(TERM2NAME) || all(is.na(TERM2NAME))) {
+            gsid2name <- data.frame(gsid=unique(gsid2gene$gsid), name=unique(gsid2gene$gsid))
+        } else {
+            gsid2name <- TERM2NAME
+            colnames(gsid2name) <- c("gsid", "name")
+        }
+        
+        USER_DATA <- gson::gson(gsid2gene = gsid2gene,
+                                gsid2name = gsid2name,
+                                species = "unknown",
+                                gsname = "unknown",
+                                version = "unknown",
+                                accessed_date = as.character(Sys.Date()),
+                                keytype = "unknown")
     } else {
         if (!inherits(gson,  "GSON")) {
             stop("gson shoud be a GSON or GSONList object")
@@ -52,76 +69,101 @@ enricher <- function(gene,
         USER_DATA <- gson
     }
     
-    enricher_internal(gene = gene,
+    enrichit::ora_gson(gene = gene,
                       pvalueCutoff = pvalueCutoff,
                       pAdjustMethod = pAdjustMethod,
                       universe = universe,
                       minGSSize = minGSSize,
                       maxGSSize = maxGSSize,
                       qvalueCutoff = qvalueCutoff,
-                      USER_DATA = USER_DATA)
+                      gson = USER_DATA)
 }
 
 
-##' a universal gene set enrichment analysis tools
-##'
-##'
-##' @title GSEA
-##' @param geneList order ranked geneList
-##' @param exponent weight of each step
-##' @param minGSSize minimal size of each geneSet for analyzing
-##' @param maxGSSize maximal size of genes annotated for testing
-##' @param eps This parameter sets the boundary for calculating the p value.
-##' @param pvalueCutoff adjusted pvalue cutoff
-##' @param pAdjustMethod  one of "holm", "hochberg", "hommel", "bonferroni", "BH", "BY", "fdr", "none"
-##' @param gson a GSON object, if not NULL, use it as annotation data. 
-##' @param TERM2GENE user input annotation of TERM TO GENE mapping, a data.frame of 2 column with term and gene.
-##' Only used when gson is NULL.
-##' @param TERM2NAME user input of TERM TO NAME mapping, a data.frame of 2 column with term and name.
-##' Only used when gson is NULL.
-##' @param verbose logical
-##' @param seed logical
-##' @param by one of 'fgsea' or 'DOSE'
-##' @param ... other parameter
-##' @return gseaResult object
-##' @author Guangchuang Yu \url{https://yulab-smu.top}
-##' @export
+#' a universal gene set enrichment analysis tools
+#'
+#'
+#' @title GSEA
+#' @param geneList order ranked geneList
+#' @param exponent weight of each step
+#' @param minGSSize minimal size of each geneSet for analyzing
+#' @param maxGSSize maximal size of genes annotated for testing
+#' @param nPerm The number of permutations.
+#' @param method method of calculating the pvalue, one of "multilevel", "monte carlo" and "fgsea"
+#' @param adaptive logical, whether to use adaptive method for calculating pvalue
+#' @param minPerm minimal number of permutations for adaptive method
+#' @param maxPerm maximal number of permutations for adaptive method
+#' @param pvalThreshold pvalue threshold for adaptive method
+#' @param pvalueCutoff adjusted pvalue cutoff
+#' @param pAdjustMethod  one of "holm", "hochberg", "hommel", "bonferroni", "BH", "BY", "fdr", "none"
+#' @param gson a GSON object, if not NULL, use it as annotation data. 
+#' @param TERM2GENE user input annotation of TERM TO GENE mapping, a data.frame of 2 column with term and gene.
+#' Only used when gson is NULL.
+#' @param TERM2NAME user input of TERM TO NAME mapping, a data.frame of 2 column with term and name.
+#' Only used when gson is NULL.
+#' @param verbose logical
+#' @param ... other parameter
+#' @return gseaResult object
+#' @author Guangchuang Yu \url{https://yulab-smu.top}
+#' @export
 GSEA <- function(geneList,
                  exponent = 1,
                  minGSSize = 10,
                  maxGSSize = 500,
-                 eps  = 1e-10,
                  pvalueCutoff = 0.05,
                  pAdjustMethod = "BH",
                  gson  = NULL,
                  TERM2GENE,
                  TERM2NAME = NA,
                  verbose = TRUE,
-                 seed = FALSE,
-                 by = 'fgsea',
+                 nPerm = 1000,
+                 method = "multilevel",
+                 adaptive = FALSE,
+                 minPerm = 101,
+                 maxPerm = 1e5,
+                 pvalThreshold = 0.1,
                  ...) {
 
     if (inherits(gson, 'GSONList')) {
         res <- lapply(gson, function(USER_DATA) {
-            GSEA_internal(geneList      = geneList,
+            enrichit::gsea_gson(geneList      = geneList,
                           exponent      = exponent,
                           minGSSize     = minGSSize,
                           maxGSSize     = maxGSSize,
-                          eps           = eps,
                           pvalueCutoff  = pvalueCutoff,
                           pAdjustMethod = pAdjustMethod,
                           verbose       = verbose,
-                          USER_DATA     = USER_DATA,
-                          seed          = seed,
-                          by            = by,
-                          ...)
+                          gson          = USER_DATA,
+                          nPerm         = nPerm,
+                          method        = method,
+                          adaptive      = adaptive,
+                          minPerm       = minPerm,
+                          maxPerm       = maxPerm,
+                          pvalThreshold = pvalThreshold)
         })
         
         class(res) <- "gseaResultList"
         return(res)
     }
     if (is.null(gson)) {
-        USER_DATA <- build_Anno(TERM2GENE, TERM2NAME)
+        # USER_DATA <- build_Anno(TERM2GENE, TERM2NAME)
+        gsid2gene <- TERM2GENE
+        colnames(gsid2gene) <- c("gsid", "gene")
+        
+        if (missing(TERM2NAME) || is.null(TERM2NAME) || all(is.na(TERM2NAME))) {
+            gsid2name <- data.frame(gsid=unique(gsid2gene$gsid), name=unique(gsid2gene$gsid))
+        } else {
+            gsid2name <- TERM2NAME
+            colnames(gsid2name) <- c("gsid", "name")
+        }
+        
+        USER_DATA <- gson::gson(gsid2gene = gsid2gene,
+                                gsid2name = gsid2name,
+                                species = "unknown",
+                                gsname = "unknown",
+                                version = "unknown",
+                                accessed_date = as.character(Sys.Date()),
+                                keytype = "unknown")
     } else {
         if (!inherits(gson,  "GSON")) {
             stop("gson shoud be a GSON or GSONList object")
@@ -129,18 +171,20 @@ GSEA <- function(geneList,
         USER_DATA <- gson
     }
     
-    GSEA_internal(geneList      = geneList,
+    enrichit::gsea_gson(geneList      = geneList,
                   exponent      = exponent,
                   minGSSize     = minGSSize,
                   maxGSSize     = maxGSSize,
-                  eps           = eps,
                   pvalueCutoff  = pvalueCutoff,
                   pAdjustMethod = pAdjustMethod,
                   verbose       = verbose,
-                  USER_DATA     = USER_DATA,
-                  seed          = seed,
-                  by            = by,
-                  ...)
+                  gson          = USER_DATA,
+                  nPerm         = nPerm,
+                  method        = method,
+                  adaptive      = adaptive,
+                  minPerm       = minPerm,
+                  maxPerm       = maxPerm,
+                  pvalThreshold = pvalThreshold)
     
 }
 

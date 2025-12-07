@@ -11,12 +11,15 @@ gseMKEGG(
   exponent = 1,
   minGSSize = 10,
   maxGSSize = 500,
-  eps = 1e-10,
   pvalueCutoff = 0.05,
   pAdjustMethod = "BH",
   verbose = TRUE,
-  seed = FALSE,
-  by = "fgsea",
+  nPerm = 1000,
+  method = "multilevel",
+  adaptive = FALSE,
+  minPerm = 101,
+  maxPerm = 1e+05,
+  pvalThreshold = 0.1,
   ...
 )
 }
@@ -33,17 +36,23 @@ gseMKEGG(
 
 \item{maxGSSize}{maximal size of genes annotated for testing}
 
-\item{eps}{This parameter sets the boundary for calculating the p value.}
-
 \item{pvalueCutoff}{pvalue Cutoff}
 
 \item{pAdjustMethod}{pvalue adjustment method}
 
 \item{verbose}{print message or not}
 
-\item{seed}{logical}
+\item{nPerm}{The number of permutations.}
 
-\item{by}{one of 'fgsea' or 'DOSE'}
+\item{method}{method of calculating the pvalue, one of "multilevel", "monte carlo" and "fgsea"}
+
+\item{adaptive}{logical, whether to use adaptive method for calculating pvalue}
+
+\item{minPerm}{minimal number of permutations for adaptive method}
+
+\item{maxPerm}{maximal number of permutations for adaptive method}
+
+\item{pvalThreshold}{pvalue threshold for adaptive method}
 
 \item{...}{other parameter}
 }

@@ -1,8 +1,0 @@
-.git
-CONTRIBUTING.md
-.travis.yml
-appveyor.yml
-docs
-mkdocs
-outdated
-.github

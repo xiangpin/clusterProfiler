@@ -1,30 +1,31 @@
-##' KEGG Enrichment Analysis of a gene set.
-##' Given a vector of genes, this function will return the enrichment KEGG
-##' categories with FDR control.
-##'
-##' @rdname enrichKEGG
-##' @param gene a vector of entrez gene id.
-##' @param organism supported organism listed in 'https://www.genome.jp/kegg/catalog/org_list.html'
-##' @param keyType one of "kegg", 'ncbi-geneid', 'ncbi-proteinid' and 'uniprot'
-##' @param minGSSize minimal size of genes annotated by Ontology term for testing.
-##' @param maxGSSize maximal size of genes annotated for testing
-##' @inheritParams enricher
-##' @param use_internal_data logical, use KEGG.db or latest online KEGG data
-##' @return A \code{enrichResult} instance.
-##' @export
-##' @importMethodsFrom AnnotationDbi mappedkeys
-##' @importMethodsFrom AnnotationDbi mget
-##' @importClassesFrom methods data.frame
-##' @author Guangchuang Yu \url{https://yulab-smu.top}
-##' @seealso [enrichResult-class], [compareCluster]
-##' @keywords manip
-##' @examples
-##' \dontrun{
-##'   data(geneList, package='DOSE')
-##'   de <- names(geneList)[1:100]
-##'   yy <- enrichKEGG(de, pvalueCutoff=0.01)
-##'   head(yy)
-##' }
+#' KEGG Enrichment Analysis of a gene set.
+#' Given a vector of genes, this function will return the enrichment KEGG
+#' categories with FDR control.
+#'
+#'
+#' @rdname enrichKEGG
+#' @param gene a vector of entrez gene id.
+#' @param organism supported organism listed in 'https://www.genome.jp/kegg/catalog/org_list.html'
+#' @param keyType one of "kegg", 'ncbi-geneid', 'ncbi-proteinid' and 'uniprot'
+#' @param minGSSize minimal size of genes annotated by Ontology term for testing.
+#' @param maxGSSize maximal size of genes annotated for testing
+#' @inheritParams enricher
+#' @param use_internal_data logical, use KEGG.db or latest online KEGG data
+#' @return A \code{enrichResult} instance.
+#' @export
+#' @importMethodsFrom AnnotationDbi mappedkeys
+#' @importMethodsFrom AnnotationDbi mget
+#' @importClassesFrom methods data.frame
+#' @author Guangchuang Yu \url{https://yulab-smu.top}
+#' @seealso [enrichResult-class], [compareCluster]
+#' @keywords manip
+#' @examples
+#' \dontrun{
+#'   data(geneList, package='DOSE')
+#'   de <- names(geneList)[1:100]
+#'   yy <- enrichKEGG(de, pvalueCutoff=0.01)
+#'   head(yy)
+#' }
 enrichKEGG <- function(
     gene,
     organism = "hsa",
@@ -58,7 +59,7 @@ enrichKEGG <- function(
         stop("organism should be a species name or a GSON object")
     }
 
-    res <- enricher_internal(
+    res <- enrichit::ora_gson(
         gene,
         pvalueCutoff = pvalueCutoff,
         pAdjustMethod = pAdjustMethod,
@@ -66,7 +67,7 @@ enrichKEGG <- function(
         minGSSize = minGSSize,
         maxGSSize = maxGSSize,
         qvalueCutoff = qvalueCutoff,
-        USER_DATA = KEGG_DATA
+        gson = KEGG_DATA
     )
     if (is.null(res)) {
         return(res)
@@ -89,17 +90,17 @@ get_KEGG_Env <- function() {
     get(".KEGG_clusterProfiler_Env", envir = .GlobalEnv)
 }
 
-##' download the latest version of KEGG pathway/module
-##'
-##'
-##' @title download_KEGG
-##' @param species species
-##' @param keggType one of 'KEGG' or 'MKEGG'
-##' @param keyType supported keyType, see bitr_kegg
-##' @return list
-##' @author Guangchuang Yu
-##' @importFrom magrittr %<>%
-##' @export
+#' download the latest version of KEGG pathway/module
+#'
+#'
+#' @title download_KEGG
+#' @param species species
+#' @param keggType one of 'KEGG' or 'MKEGG'
+#' @param keyType supported keyType, see bitr_kegg
+#' @return list
+#' @author Guangchuang Yu
+#' @importFrom magrittr %<>%
+#' @export
 download_KEGG <- function(species, keggType = "KEGG", keyType = "kegg") {
     KEGG_Env <- get_KEGG_Env()
 
@@ -181,8 +182,7 @@ download_KEGG <- function(species, keggType = "KEGG", keyType = "kegg") {
 }
 
 prepare_KEGG <- function(species, KEGG_Type = "KEGG", keyType = "kegg") {
-    kegg <- download_KEGG(species, KEGG_Type, keyType)
-    build_Anno(kegg$KEGGPATHID2EXTID, kegg$KEGGPATHID2NAME)
+    gson_KEGG(species, KEGG_Type, keyType)
 }
 
 download.KEGG.Path <- function(species) {
@@ -249,26 +249,26 @@ download.KEGG.Module <- function(species) {
 }
 
 
-##' viewKEGG function is for visualize KEGG pathways
-##' works with enrichResult object to visualize enriched KEGG pathway
-##'
-##'
-##' @param obj enrichResult object
-##' @param pathwayID pathway ID or index
-##' @param foldChange fold change values
-##' @param color.low color of low foldChange genes
-##' @param color.high color of high foldChange genes
-##' @param kegg.native logical
-##' @param out.suffix suffix of output file
+#' viewKEGG function is for visualize KEGG pathways
+#' works with enrichResult object to visualize enriched KEGG pathway
+#'
+#'
+#' @param obj enrichResult object
+#' @param pathwayID pathway ID or index
+#' @param foldChange fold change values
+#' @param color.low color of low foldChange genes
+#' @param color.high color of high foldChange genes
+#' @param kegg.native logical
+#' @param out.suffix suffix of output file
 ## @importFrom pathview pathview
 ## @importFrom pathview kegg.species.code
-##' @importFrom utils citation
-##' @references Luo et al. (2013) Pathview: an R/Bioconductor package for
-##'pathway-based data integration and visualization. \emph{Bioinformatics} (Oxford,
-##'England), 29:14 1830--1831, 2013. ISSN 1367-4803
-##'\url{http://bioinformatics.oxfordjournals.org/content/abstract/29/14/1830.abstract}
-##'PMID: 23740750
-##' @noRd
+#' @importFrom utils citation
+#' @references Luo et al. (2013) Pathview: an R/Bioconductor package for
+#'pathway-based data integration and visualization. \emph{Bioinformatics} (Oxford,
+#'England), 29:14 1830--1831, 2013. ISSN 1367-4803
+#'\url{http://bioinformatics.oxfordjournals.org/content/abstract/29/14/1830.abstract}
+#'PMID: 23740750
+#' @noRd
 viewKEGG <- function(
     obj,
     pathwayID,
@@ -319,31 +319,6 @@ viewKEGG <- function(
     return(res)
 }
 
-##' @importFrom AnnotationDbi as.list
-##' @importFrom utils stack
-get_data_from_KEGG_db <- function(species) {
-    PATHID2EXTID <- as.list(get_KEGG_db("KEGGPATHID2EXTID"))
-    if (!any(grepl(species, names(PATHID2EXTID)))) {
-        stop("input species is not supported by KEGG.db...")
-    }
-    idx <- grep(species, names(PATHID2EXTID))
-    PATHID2EXTID <- PATHID2EXTID[idx]
-    PATHID2EXTID.df <- stack(PATHID2EXTID)
-    PATHID2EXTID.df <- PATHID2EXTID.df[, c(2, 1)]
-    PATHID2NAME <- as.list(get_KEGG_db("KEGGPATHID2NAME"))
-    PATHID2NAME.df <- data.frame(
-        path = names(PATHID2NAME),
-        name = unlist(PATHID2NAME)
-    )
-    build_Anno(PATHID2EXTID.df, PATHID2NAME.df)
-}
-
-get_KEGG_db <- function(kw) {
-    annoDb <- "KEGG.db"
-    suppressMessages(requireNamespace(annoDb))
-    eval(parse(text = paste0(annoDb, "::", kw)))
-}
-
 organismMapper <- function(organism) {
     ## it only map those previous supported organism
 
@@ -389,4 +364,56 @@ organismMapper <- function(organism) {
         species <- organism
     }
     return(species)
+}
+
+get_data_from_KEGG_db <- function(species) {
+    package <- "KEGG.db"
+    if (!requireNamespace(package, quietly = TRUE)) {
+        stop("Package 'KEGG.db' is not installed. Please install it.")
+    }
+    
+    KEGGPATHID2EXTID <- get("KEGGPATHID2EXTID", envir = asNamespace(package))
+    KEGGPATHID2NAME <- get("KEGGPATHID2NAME", envir = asNamespace(package))
+    
+    # Filter by species
+    # keys are like "hsa00010"
+    all_keys <- AnnotationDbi::keys(KEGGPATHID2EXTID)
+    pattern <- paste0("^", species)
+    species_keys <- all_keys[grep(pattern, all_keys)]
+    
+    if (length(species_keys) == 0) {
+        stop("No data found for species '", species, "' in KEGG.db")
+    }
+    
+    # Get gene IDs
+    genes_list <- AnnotationDbi::mget(species_keys, KEGGPATHID2EXTID)
+    
+    gsid2gene <- data.frame(
+        gsid = rep(names(genes_list), times = sapply(genes_list, length)),
+        gene = unlist(genes_list),
+        stringsAsFactors = FALSE
+    )
+    
+    # Get names
+    # KEGGPATHID2NAME keys are usually "00010" (without species prefix)
+    path_ids <- sub(pattern, "", species_keys)
+    
+    names_list <- AnnotationDbi::mget(path_ids, KEGGPATHID2NAME, ifnotfound = NA)
+    
+    gsid2name <- data.frame(
+        gsid = species_keys,
+        name = unlist(names_list),
+        stringsAsFactors = FALSE
+    )
+    
+    gsid2name <- gsid2name[!is.na(gsid2name$name), ]
+    
+    gson::gson(
+        gsid2gene = gsid2gene,
+        gsid2name = gsid2name,
+        species = species,
+        gsname = "KEGG",
+        version = "KEGG.db",
+        keytype = "ENTREZID"
+    )
 }

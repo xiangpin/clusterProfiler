@@ -1,14 +1,15 @@
-##' download the latest version of KEGG pathway and stored in a 'GSON' object
-##'
-##'
-##' @title gson_KEGG
-##' @param species species
-##' @param KEGG_Type one of "KEGG" and "MKEGG"
-##' @param keyType one of "kegg", 'ncbi-geneid', 'ncib-proteinid' and 'uniprot'.
-##' @return a 'GSON' object
-##' @author Guangchuang Yu
-##' @importFrom gson gson
-##' @export
+#' download the latest version of KEGG pathway and stored in a 'GSON' object
+#'
+#'
+#' @title gson_KEGG
+#' @param species species
+#' @param KEGG_Type one of "KEGG" and "MKEGG"
+#' @param keyType one of "kegg", 'ncbi-geneid', 'ncib-proteinid' and 'uniprot'.
+#' @return a 'GSON' object
+#' @author Guangchuang Yu
+#' @importFrom gson gson
+#' @importFrom utils stack
+#' @export
 gson_KEGG <- function(species, KEGG_Type="KEGG", keyType="kegg") {
     x <- download_KEGG(species, KEGG_Type, keyType)
     gsid2gene <- setNames(x[[1]], c("gsid", "gene"))
@@ -71,16 +72,16 @@ gson_KO <- function() {
 }
 
 
-##' download the latest version of KEGG pathway and stored in a 'GSON' object
-##'
-##'
-##' @title gson_KEGG
-##' @param OrgDb OrgDb
-##' @param keytype keytype of genes.
-##' @param ont one of "BP", "MF", "CC", and "ALL"
-##' @return a 'GSON' object
-##' @importFrom gson gson
-##' @export
+#' download the latest version of KEGG pathway and stored in a 'GSON' object
+#'
+#'
+#' @title gson_KEGG
+#' @param OrgDb OrgDb
+#' @param keytype keytype of genes.
+#' @param ont one of "BP", "MF", "CC", and "ALL"
+#' @return a 'GSON' object
+#' @importFrom gson gson
+#' @export
 gson_GO <- function(OrgDb, keytype = 'ENTREZID', ont = "BP") {
 
     if (is(OrgDb, "character")) {
@@ -126,12 +127,12 @@ gson_GO <- function(OrgDb, keytype = 'ENTREZID', ont = "BP") {
         keytype = keytype
     )
 }
-##' Download the latest version of WikiPathways data and stored in a 'GSON' object
-##'
-##'
-##' @title gson_WP
-##' @param organism supported organism, which can be accessed via the get_wp_organisms() function.
-##' @export
+#' Download the latest version of WikiPathways data and stored in a 'GSON' object
+#'
+#'
+#' @title gson_WP
+#' @param organism supported organism, which can be accessed via the get_wp_organisms() function.
+#' @export
 gson_WP <- function(organism) {
     get_wp_data(organism, output = "GSON")
 }

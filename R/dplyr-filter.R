@@ -1,5 +1,5 @@
-##' @method filter enrichResult
-##' @export
+#' @method filter enrichResult
+#' @export
 filter.enrichResult <- function(.data, ..., .preserve = FALSE) {
     dots <- quos(...)
     .data@result %<>% filter(!!!dots, .preserve = .preserve)
@@ -7,12 +7,12 @@ filter.enrichResult <- function(.data, ..., .preserve = FALSE) {
 }
 
 
-##' @method filter gseaResult
-##' @export
+#' @method filter gseaResult
+#' @export
 filter.gseaResult <- filter.enrichResult
 
-##' @method filter compareClusterResult
-##' @export
+#' @method filter compareClusterResult
+#' @export
 filter.compareClusterResult <- function(.data, ..., .preserve = FALSE) {
     dots <- quos(...)
     .data@compareClusterResult %<>% filter(!!!dots, .preserve = .preserve)

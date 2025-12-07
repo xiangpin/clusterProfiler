@@ -1,11 +1,11 @@
-##' KEGG Module Enrichment Analysis of a gene set.
-##' Given a vector of genes, this function will return the enrichment KEGG Module
-##' categories with FDR control.
-##'
-##'
-##' @inheritParams enrichKEGG
-##' @return A \code{enrichResult} instance.
-##' @export
+#' KEGG Module Enrichment Analysis of a gene set.
+#' Given a vector of genes, this function will return the enrichment KEGG Module
+#' categories with FDR control.
+#'
+#'
+#' @inheritParams enrichKEGG
+#' @return A \code{enrichResult} instance.
+#' @export
 enrichMKEGG <- function(gene,
                         organism = 'hsa',
                         keyType = 'kegg',
@@ -18,14 +18,14 @@ enrichMKEGG <- function(gene,
 
     species <- organismMapper(organism)
     KEGG_DATA <- prepare_KEGG(species, "MKEGG", keyType)
-    res <- enricher_internal(gene,
+    res <- enrichit::ora_gson(gene,
                              pvalueCutoff  = pvalueCutoff,
                              pAdjustMethod = pAdjustMethod,
                              universe      = universe,
                              minGSSize     = minGSSize,
                              maxGSSize     = maxGSSize,
                              qvalueCutoff  = qvalueCutoff,
-                             USER_DATA = KEGG_DATA)
+                             gson = KEGG_DATA)
 
     if (is.null(res))
         return(res)

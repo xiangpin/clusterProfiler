@@ -1,21 +1,21 @@
-##' plot GO graph
-##'
-##'
-##' @title plotGOgraph
-##' @param x output of enrichGO or gseGO
-##' @param firstSigNodes number of significant nodes (retangle nodes in the graph)
-##' @param useInfo additional info
-##' @param sigForAll if TRUE the score/p-value of all nodes in the DAG is shown, otherwise only score will be shown
-##' @param useFullNames logical
-##' @param ... additional parameter of showSigOfNodes, please refer to topGO
-##' @return GO DAG graph
-##' @importFrom yulab.utils get_fun_from_pkg
+#' plot GO graph
+#'
+#'
+#' @title plotGOgraph
+#' @param x output of enrichGO or gseGO
+#' @param firstSigNodes number of significant nodes (retangle nodes in the graph)
+#' @param useInfo additional info
+#' @param sigForAll if TRUE the score/p-value of all nodes in the DAG is shown, otherwise only score will be shown
+#' @param useFullNames logical
+#' @param ... additional parameter of showSigOfNodes, please refer to topGO
+#' @return GO DAG graph
+#' @importFrom yulab.utils get_fun_from_pkg
 ## @importClassesFrom topGO topGOdata
 ## @importFrom topGO showSigOfNodes
 ## @importFrom topGO annFUN.gene2GO
 ## @importFrom topGO groupGOTerms
-##' @export
-##' @author Guangchuang Yu
+#' @export
+#' @author Guangchuang Yu
 plotGOgraph <- function(x,
                         firstSigNodes=10,
                         useInfo="all",

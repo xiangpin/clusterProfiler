@@ -37,8 +37,12 @@ removeEmptyEntry.list <- function(x) {
     x[notNA.idx]
 }
 
-
-GSEA_internal <- DOSE:::GSEA_internal
-enricher_internal <- DOSE:::enricher_internal
-
 globalVariables(".")
+
+#' @importFrom GOSemSim get_organism
+#' @export
+GOSemSim::get_organism
+
+TERMID2EXTID <- getFromNamespace("TERMID2EXTID", "enrichit")
+
+TERM2NAME <- getFromNamespace("TERM2NAME", "enrichit")

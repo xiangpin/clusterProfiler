@@ -1,56 +1,56 @@
-##' Compare gene clusters functional profile
-##'
-##' Given a list of gene set, this function will compute profiles of each gene
-##' cluster.
-##'
-##'
-##' @param geneClusters a list of entrez gene id. Alternatively, a formula of type \code{Entrez~group}
-##' or a formula of type \code{Entrez | logFC ~ group} for "gseGO", "gseKEGG" and "GSEA".
-##' @param fun One of "groupGO", "enrichGO", "enrichKEGG", "enrichDO" or "enrichPathway" .
-##' Users can also supply their own function.
-##' @param data if geneClusters is a formula, the data from which the clusters must be extracted.
-##' @param source_from If using a custom function in "fun", provide the source package as
-##' a string here. Otherwise, the function will be obtained from the global environment.
-##' @param ...  Other arguments.
-##' @return A \code{clusterProfResult} instance.
-##' @importFrom methods new
-##' @importFrom stats formula
-##' @importFrom plyr llply
-##' @importFrom plyr ldply
-##' @importFrom plyr dlply
-##' @importFrom utils modifyList
-##' @importFrom rlang %||%
-##' @importClassesFrom DOSE compareClusterResult
-##' @export
-##' @author Guangchuang Yu \url{https://yulab-smu.top}
-##' @seealso [compareClusterResult-class], [groupGO], [enrichGO], [enrichKEGG],
-##' [enrichDO][DOSE::enrichDO], [enrichPathway][ReactomePA::enrichPathway]
-##' @keywords manip
-##' @examples
-##' \dontrun{
-##' data(gcSample)
-##' xx <- compareCluster(gcSample, fun="enrichKEGG",
-##'                      organism="hsa", pvalueCutoff=0.05)
-##' as.data.frame(xx)
-##' # plot(xx, type="dot", caption="KEGG Enrichment Comparison")
-##' dotplot(xx)
-##'
-##' ## formula interface
-##' mydf <- data.frame(Entrez=c('1', '100', '1000', '100101467',
-##'                             '100127206', '100128071'),
-##'                    logFC = c(1.1, -0.5, 5, 2.5, -3, 3),
-##'                    group = c('A', 'A', 'A', 'B', 'B', 'B'),
-##'                    othergroup = c('good', 'good', 'bad', 'bad', 'good', 'bad'))
-##' xx.formula <- compareCluster(Entrez~group, data=mydf,
-##'                              fun='groupGO', OrgDb='org.Hs.eg.db')
-##' as.data.frame(xx.formula)
-##'
-##' ## formula interface with more than one grouping variable
-##' xx.formula.twogroups <- compareCluster(Entrez~group+othergroup, data=mydf,
-##'                                        fun='groupGO', OrgDb='org.Hs.eg.db')
-##' as.data.frame(xx.formula.twogroups)
-##'
-##' }
+#' Compare gene clusters functional profile
+#'
+#' Given a list of gene set, this function will compute profiles of each gene
+#' cluster.
+#'
+#'
+#' @param geneClusters a list of entrez gene id. Alternatively, a formula of type \code{Entrez~group}
+#' or a formula of type \code{Entrez | logFC ~ group} for "gseGO", "gseKEGG" and "GSEA".
+#' @param fun One of "groupGO", "enrichGO", "enrichKEGG", "enrichDO" or "enrichPathway" .
+#' Users can also supply their own function.
+#' @param data if geneClusters is a formula, the data from which the clusters must be extracted.
+#' @param source_from If using a custom function in "fun", provide the source package as
+#' a string here. Otherwise, the function will be obtained from the global environment.
+#' @param ...  Other arguments.
+#' @return A \code{clusterProfResult} instance.
+#' @importFrom methods new
+#' @importFrom stats formula
+#' @importFrom plyr llply
+#' @importFrom plyr ldply
+#' @importFrom plyr dlply
+#' @importFrom utils modifyList
+#' @importFrom rlang %||%
+#' @importClassesFrom enrichit compareClusterResult
+#' @export
+#' @author Guangchuang Yu \url{https://yulab-smu.top}
+#' @seealso [compareClusterResult-class], [groupGO], [enrichGO], [enrichKEGG],
+#' [enrichDO][DOSE::enrichDO], [enrichPathway][ReactomePA::enrichPathway]
+#' @keywords manip
+#' @examples
+#' \dontrun{
+#' data(gcSample)
+#' xx <- compareCluster(gcSample, fun="enrichKEGG",
+#'                      organism="hsa", pvalueCutoff=0.05)
+#' as.data.frame(xx)
+#' # plot(xx, type="dot", caption="KEGG Enrichment Comparison")
+#' dotplot(xx)
+#'
+#' ## formula interface
+#' mydf <- data.frame(Entrez=c('1', '100', '1000', '100101467',
+#'                             '100127206', '100128071'),
+#'                    logFC = c(1.1, -0.5, 5, 2.5, -3, 3),
+#'                    group = c('A', 'A', 'A', 'B', 'B', 'B'),
+#'                    othergroup = c('good', 'good', 'bad', 'bad', 'good', 'bad'))
+#' xx.formula <- compareCluster(Entrez~group, data=mydf,
+#'                              fun='groupGO', OrgDb='org.Hs.eg.db')
+#' as.data.frame(xx.formula)
+#'
+#' ## formula interface with more than one grouping variable
+#' xx.formula.twogroups <- compareCluster(Entrez~group+othergroup, data=mydf,
+#'                                        fun='groupGO', OrgDb='org.Hs.eg.db')
+#' as.data.frame(xx.formula.twogroups)
+#'
+#' }
 compareCluster <- function(
     geneClusters,
     fun = "enrichGO",
@@ -255,7 +255,7 @@ extract_params <- function(x) {
 ## @return message
 ## @importFrom methods show
 ## @author Guangchuang Yu \url{https://yulab-smu.top}
-##' @importFrom utils str
+#' @importFrom utils str
 setMethod("show", signature(object = "compareClusterResult"), function(object) {
     cmsg <- paste(
         "T Wu, E Hu, S Xu, M Chen, P Guo, Z Dai, T Feng, L Zhou, ",
@@ -337,16 +337,16 @@ setMethod(
 )
 
 
-##' merge a list of enrichResult objects to compareClusterResult
-##'
-##'
-##' @title merge_result
-##' @param enrichResultList a list of enrichResult objects
-##' @return a compareClusterResult instance
-##' @author Guangchuang Yu
-##' @importFrom plyr ldply
-##' @importFrom methods is
-##' @export
+#' merge a list of enrichResult objects to compareClusterResult
+#'
+#'
+#' @title merge_result
+#' @param enrichResultList a list of enrichResult objects
+#' @return a compareClusterResult instance
+#' @author Guangchuang Yu
+#' @importFrom plyr ldply
+#' @importFrom methods is
+#' @export
 merge_result <- function(enrichResultList) {
     if (!is(enrichResultList, "list")) {
         stop("input should be a name list...")

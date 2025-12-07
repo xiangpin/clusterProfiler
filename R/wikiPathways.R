@@ -1,13 +1,13 @@
-##' ORA analysis for WikiPathways
-##'
-##' This function performs over-representation analysis using WikiPathways
-##' @title enrichWP
-##' @param gene a vector of entrez gene id
-##' @param organism supported organisms, which can be accessed via the get_wp_organisms() function
-##' @param ... additional parameters, see also the parameters supported by the enricher() function
-##' @return A \code{enrichResult} instance
-##' @export
-##' @author Guangchuang Yu
+#' ORA analysis for WikiPathways
+#'
+#' This function performs over-representation analysis using WikiPathways
+#' @title enrichWP
+#' @param gene a vector of entrez gene id
+#' @param organism supported organisms, which can be accessed via the get_wp_organisms() function
+#' @param ... additional parameters, see also the parameters supported by the enricher() function
+#' @return A \code{enrichResult} instance
+#' @export
+#' @author Guangchuang Yu
 enrichWP <- function(gene, organism, ...) {
     wpdata <- prepare_WP_data(organism)
     res <- enricher(gene,
@@ -24,16 +24,16 @@ enrichWP <- function(gene, organism, ...) {
 }
 
 
-##' GSEA analysis for WikiPathways
-##'
-##' This function performs GSEA using WikiPathways
-##' @title gseWP
-##' @param geneList ranked gene list
-##' @param organism supported organisms, which can be accessed via the get_wp_organisms() function
-##' @param ... additional parameters, see also the parameters supported by the GSEA() function
-##' @return A \code{gseaResult} instance
-##' @export
-##' @author Guangchuang Yu 
+#' GSEA analysis for WikiPathways
+#'
+#' This function performs GSEA using WikiPathways
+#' @title gseWP
+#' @param geneList ranked gene list
+#' @param organism supported organisms, which can be accessed via the get_wp_organisms() function
+#' @param ... additional parameters, see also the parameters supported by the GSEA() function
+#' @return A \code{gseaResult} instance
+#' @export
+#' @author Guangchuang Yu 
 gseWP <- function(geneList, organism, ...) {
     wpdata <- prepare_WP_data(organism)
     res <- GSEA(geneList,
@@ -50,7 +50,7 @@ gseWP <- function(geneList, organism, ...) {
     return(res)
 }
 
-##' @importFrom rlang .data
+#' @importFrom rlang .data
 prepare_WP_data <- function(organism) {
     wp2gene <- get_wp_data(organism)
     ##TERM2GENE
@@ -69,21 +69,21 @@ get_wp_gmtfile <- function() {
 }
 
 
-##' list supported organism of WikiPathways
-##'
-##' This function extracts information from 'https://data.wikipathways.org/current/gmt/'
-##' and lists all supported organisms
-##' @title get_wp_organism
-##' @return supported organism list
-##' @export
-##' @author Guangchuang Yu
+#' list supported organism of WikiPathways
+#'
+#' This function extracts information from 'https://data.wikipathways.org/current/gmt/'
+#' and lists all supported organisms
+#' @title get_wp_organism
+#' @return supported organism list
+#' @export
+#' @author Guangchuang Yu
 get_wp_organisms <- function() {
     gmtfile <- get_wp_gmtfile()
     orgs <- sub("wikipathways\\-\\d+\\-gmt\\-([_A-Za-z]+)\\.gmt", "\\1", gmtfile)
     sub("_", " ",  orgs)
 }
 
-##' @importFrom gson read.gmt.wp
+#' @importFrom gson read.gmt.wp
 get_wp_data <- function(organism, output = "data.frame") {
     organism <- sub(" ", "_", organism)
     gmtfile <- get_wp_gmtfile()

@@ -1,13 +1,14 @@
-##' ORA analysis for Pathway Commons
-##'
-##' This function performs over-representation analysis using  Pathway Commons
-##' @title enrichPC
-##' @param gene a vector of genes (either hgnc symbols or uniprot IDs)
+#' ORA analysis for Pathway Commons
+#'
+#' This function performs over-representation analysis using  Pathway Commons
+#' @title enrichPC
+#' @param gene a vector of genes (either hgnc symbols or uniprot IDs)
 ## @param source Data source of Pathway Commons, e.g., 'reactome', 'kegg', 'pathbank', 'netpath', 'panther', etc.
 ## @param keyType specify the type of input 'gene' (one of 'hgnc' or 'uniprot')
-##' @param ... additional parameters, see also the parameters supported by the enricher() function
-##' @return A \code{enrichResult} instance
-##' @export
+#' @param ... additional parameters, see also the parameters supported by the enricher() function
+#' @return A \code{enrichResult} instance
+#' @importFrom utils stack
+#' @export
 enrichPC <- function(gene, ...) {
     # keyType <- match.arg(keyType, c("hgnc", "uniprot"))
     # source <- match.arg(source, get_pc_source())
@@ -27,17 +28,17 @@ enrichPC <- function(gene, ...) {
     return(res)
 }
 
-##' GSEA analysis for  Pathway Commons
-##'
-##' This function performs GSEA using  Pathway Commons
-##' @title gsePC
-##' @param geneList a ranked gene list
+#' GSEA analysis for  Pathway Commons
+#'
+#' This function performs GSEA using  Pathway Commons
+#' @title gsePC
+#' @param geneList a ranked gene list
 ## @param source Data source of Pathway Commons, e.g., 'reactome', 'kegg', 'pathbank', 'netpath', 'panther', etc.
 ## @param keyType specify the type of input 'gene' (one of 'hgnc' or 'uniprot')
-##' @param ... additional parameters, see also the parameters supported by the GSEA() function
-##' @importFrom rlang check_installed
-##' @return A \code{gseaResult} instance
-##' @export
+#' @param ... additional parameters, see also the parameters supported by the GSEA() function
+#' @importFrom rlang check_installed
+#' @return A \code{gseaResult} instance
+#' @export
 gsePC <- function(geneList, ...) {
     # keyType <- match.arg(keyType, c("hgnc", "uniprot"))
     # source <- match.arg(source, get_pc_source())
@@ -123,16 +124,16 @@ read.gmt.pc_internal <- function(gmtfile) {
     # return(res)
 }
 
-##' Parse gmt file from Pathway Common
-##'
-##' This function parse gmt file downloaded from Pathway common
-##' @title read.gmt.pc
-##' @param gmtfile A gmt file
-##' @param output one of 'data.frame' or 'GSON'
-##' @return A data.frame or A GSON object depends on the value of 'output'
-##' @importFrom rlang .data
-##' @importFrom tidyr separate
-##' @export
+#' Parse gmt file from Pathway Common
+#'
+#' This function parse gmt file downloaded from Pathway common
+#' @title read.gmt.pc
+#' @param gmtfile A gmt file
+#' @param output one of 'data.frame' or 'GSON'
+#' @return A data.frame or A GSON object depends on the value of 'output'
+#' @importFrom rlang .data
+#' @importFrom tidyr separate
+#' @export
 read.gmt.pc <- function(gmtfile, output = "data.frame") {
     output <- match.arg(output, c("data.frame", "gson", "GSON"))
 

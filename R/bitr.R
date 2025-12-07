@@ -1,32 +1,32 @@
-##' list ID types supported by annoDb
-##'
-##'
-##' @title idType
-##' @param OrgDb annotation db
-##' @return character vector
-##' @importFrom GOSemSim load_OrgDb
-##' @importFrom AnnotationDbi keytypes
-##' @export
-##' @author Guangchuang Yu
+#' list ID types supported by annoDb
+#'
+#'
+#' @title idType
+#' @param OrgDb annotation db
+#' @return character vector
+#' @importFrom yulab.utils load_OrgDb
+#' @importFrom AnnotationDbi keytypes
+#' @export
+#' @author Guangchuang Yu
 idType <- function(OrgDb = "org.Hs.eg.db") {
     db <- load_OrgDb(OrgDb)
     keytypes(db)
 }
 
-##' Biological Id TRanslator
-##'
-##'
-##' @title bitr
-##' @param geneID input gene id
-##' @param fromType input id type
-##' @param toType output id type
-##' @param OrgDb annotation db
-##' @param drop drop NA or not
-##' @return data.frame
-##' @importFrom magrittr %>%
-##' @importFrom magrittr %<>%
-##' @export
-##' @author Guangchuang Yu
+#' Biological Id TRanslator
+#'
+#'
+#' @title bitr
+#' @param geneID input gene id
+#' @param fromType input id type
+#' @param toType output id type
+#' @param OrgDb annotation db
+#' @param drop drop NA or not
+#' @return data.frame
+#' @importFrom magrittr %>%
+#' @importFrom magrittr %<>%
+#' @export
+#' @author Guangchuang Yu
 bitr <- function(geneID, fromType, toType, OrgDb, drop=TRUE) {
     idTypes <- idType(OrgDb)
     msg <-  paste0("should be one of ", paste(idTypes, collapse=", "), ".")
@@ -58,18 +58,18 @@ bitr <- function(geneID, fromType, toType, OrgDb, drop=TRUE) {
     return(res)
 }
 
-##' convert biological ID using KEGG API
-##'
-##'
-##' @title bitr_kegg
-##' @param geneID input gene id
-##' @param fromType input id type
-##' @param toType output id type
-##' @param organism supported organism, can be search using search_kegg_organism function
-##' @param drop drop NA or not
-##' @return data.frame
-##' @export
-##' @author Guangchuang Yu
+#' convert biological ID using KEGG API
+#'
+#'
+#' @title bitr_kegg
+#' @param geneID input gene id
+#' @param fromType input id type
+#' @param toType output id type
+#' @param organism supported organism, can be search using search_kegg_organism function
+#' @param drop drop NA or not
+#' @return data.frame
+#' @export
+#' @author Guangchuang Yu
 bitr_kegg <- function(geneID, fromType, toType, organism, drop=TRUE) {
     id_types <- c("Path", "Module", "ncbi-proteinid", "ncbi-geneid", "uniprot", "kegg")
     fromType <- match.arg(fromType, id_types)
@@ -133,17 +133,17 @@ KEGG_convert <- function(fromType, toType, species) {
 }
 
 
-##' query all genes in a KEGG pathway or module
-##'
-##'
-##' @title KEGG_path2extid
-##' @param keggID KEGG ID, path or module ID
-##' @param species species
-##' @param keggType one of 'Path' or 'Module'
-##' @param keyType KEGG gene type, one of "ncbi-proteinid", "ncbi-geneid", "uniprot", or "kegg"
-##' @return extid vector
-##' @author guangchuang yu
-##' @noRd
+#' query all genes in a KEGG pathway or module
+#'
+#'
+#' @title KEGG_path2extid
+#' @param keggID KEGG ID, path or module ID
+#' @param species species
+#' @param keggType one of 'Path' or 'Module'
+#' @param keyType KEGG gene type, one of "ncbi-proteinid", "ncbi-geneid", "uniprot", or "kegg"
+#' @return extid vector
+#' @author guangchuang yu
+#' @noRd
 KEGG_path2extid <- function(keggID, species=sub("\\d+$", "", keggID),
                           keggType = "Path", keyType = "kegg") {
     path2extid <- KEGGPATHID2EXTID(species, keggType, keyType)

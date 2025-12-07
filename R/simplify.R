@@ -1,22 +1,22 @@
-##' simplify output from enrichGO and gseGO by removing redundancy of enriched GO terms
-##'
-##'
-##' @name simplify
-##' @docType methods
-##' @rdname simplify-methods
-##' @title simplify method
-##' @param x output of enrichGO
-##' @param cutoff similarity cutoff
-##' @param by feature to select representative term, selected by 'select_fun' function
-##' @param select_fun function to select feature passed by 'by' parameter
-##' @param measure method to measure similarity
-##' @param semData GOSemSimDATA object
-##' @return updated enrichResult object
-##' @exportMethod simplify
-##' @references issue #28
-##' \url{https://github.com/GuangchuangYu/clusterProfiler/issues/28}
-##' @aliases simplify,enrichResult-method
-##' @author Guangchuang Yu
+#' simplify output from enrichGO and gseGO by removing redundancy of enriched GO terms
+#'
+#'
+#' @name simplify
+#' @docType methods
+#' @rdname simplify-methods
+#' @title simplify method
+#' @param x output of enrichGO
+#' @param cutoff similarity cutoff
+#' @param by feature to select representative term, selected by 'select_fun' function
+#' @param select_fun function to select feature passed by 'by' parameter
+#' @param measure method to measure similarity
+#' @param semData GOSemSimDATA object
+#' @return updated enrichResult object
+#' @exportMethod simplify
+#' @references issue #28
+#' \url{https://github.com/GuangchuangYu/clusterProfiler/issues/28}
+#' @aliases simplify,enrichResult-method
+#' @author Guangchuang Yu
 setMethod("simplify", signature(x="enrichResult"),
           function(x, cutoff=0.7, by="p.adjust", select_fun=min, measure="Wang", semData = NULL) {
               if (!x@ontology %in% c("BP", "MF", "CC", "GOALL"))
@@ -37,12 +37,12 @@ setMethod("simplify", signature(x="enrichResult"),
           }
 )
 
-##' @rdname simplify-methods
-##' @exportMethod simplify
-##' @references issue #162
-##' \url{https://github.com/GuangchuangYu/clusterProfiler/issues/162}
-##' @aliases simplify,gseaResult-method
-##' @author Gwang-Jin Kim and Guangchuang Yu
+#' @rdname simplify-methods
+#' @exportMethod simplify
+#' @references issue #162
+#' \url{https://github.com/GuangchuangYu/clusterProfiler/issues/162}
+#' @aliases simplify,gseaResult-method
+#' @author Gwang-Jin Kim and Guangchuang Yu
 setMethod("simplify", signature(x="gseaResult"),
           function(x, cutoff=0.7, by="p.adjust", select_fun=min, measure="Wang", semData=NULL) {
             if (!x@setType %in% c("BP", "MF", "CC", "GOALL"))
@@ -63,9 +63,9 @@ setMethod("simplify", signature(x="gseaResult"),
           }
 )
 
-##' @importFrom GOSemSim mgoSim
-##' @importFrom GOSemSim godata
-##' @importFrom tidyr gather
+#' @importFrom GOSemSim mgoSim
+#' @importFrom GOSemSim godata
+#' @importFrom tidyr gather
 simplify_internal <- function(res, cutoff=0.7, by="p.adjust", select_fun=min, 
                               measure="Rel", ontology, semData) {
     if (missing(semData) || is.null(semData)) {
@@ -131,17 +131,17 @@ simplify_internal <- function(res, cutoff=0.7, by="p.adjust", select_fun=min,
 
 
 
-##' simplify output from compareCluster by removing redundancy of enriched GO terms
-##'
-##'
-##' @name simplify
-##' @docType methods
-##' @rdname simplify-methods
-##' @title simplify method
-##' @return updated compareClusterResult object
-##' @exportMethod simplify
-##' @aliases simplify,compareClusterResult-method
-##' @author Guangchuang Yu
+#' simplify output from compareCluster by removing redundancy of enriched GO terms
+#'
+#'
+#' @name simplify
+#' @docType methods
+#' @rdname simplify-methods
+#' @title simplify method
+#' @return updated compareClusterResult object
+#' @exportMethod simplify
+#' @aliases simplify,compareClusterResult-method
+#' @author Guangchuang Yu
 setMethod("simplify", signature(x="compareClusterResult"),
           function(x, cutoff=0.7, by="p.adjust", select_fun=min, measure="Wang", semData=NULL) {
               res <- x@compareClusterResult
@@ -176,13 +176,13 @@ setMethod("simplify", signature(x="compareClusterResult"),
 )
 
 
-##' @param data.frame of enrichment result 
-##' @param cutoff similarity cutoff
-##' @param by feature to select representative term, selected by 'select_fun' function
-##' @param select_fun function to select feature passed by 'by' parameter
-##' @param measure method to measure similarity
-##' @param semData GOSemSimDATA object
-##' @noRd
+#' @param data.frame of enrichment result 
+#' @param cutoff similarity cutoff
+#' @param by feature to select representative term, selected by 'select_fun' function
+#' @param select_fun function to select feature passed by 'by' parameter
+#' @param measure method to measure similarity
+#' @param semData GOSemSimDATA object
+#' @noRd
 simplify_ALL <- function(res, cutoff, by, select_fun, measure, semData) {
     ONTOLOGY <- NULL
     lres <- lapply(unique(res[, "ONTOLOGY"]), function(y)

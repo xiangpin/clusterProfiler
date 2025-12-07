@@ -11,6 +11,10 @@ TODO:
   - e.g. independent test for different omics data and then combine results
 -->
 
+# clusterProfiler 4.19.2.001
+
++ use 'enrichit' as engine for enrichment analysis (2025-12-07, Sun)
+
 # clusterProfiler 4.19.2
 
 + use 'quarto' as vignette engine (2025-11-20, Thu)

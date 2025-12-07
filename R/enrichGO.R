@@ -1,31 +1,32 @@
-##' GO Enrichment Analysis of a gene set.
-##' Given a vector of genes, this function will return the enrichment GO
-##' categories after FDR control.
-##'
-##'
-##' @param gene a vector of entrez gene id.
-##' @param OrgDb OrgDb
-##' @param keyType keytype of input gene
-##' @param ont One of "BP", "MF", and "CC" subontologies, or "ALL" for all three.
-##' @inheritParams enricher
-##' @param minGSSize minimal size of genes annotated by Ontology term for testing.
-##' @param maxGSSize maximal size of genes annotated for testing
-##' @param readable whether mapping gene ID to gene Name
-##' @param pool If ont='ALL', whether pool 3 GO sub-ontologies
-##' @return An \code{enrichResult} instance.
-##' @importClassesFrom DOSE enrichResult
-##' @importFrom DOSE setReadable
-##' @seealso [enrichResult-class], [compareCluster]
-##' @keywords manip
-##' @export
-##' @author Guangchuang Yu \url{https://yulab-smu.top}
-##' @examples
-##' \dontrun{
-##'   data(geneList, package = "DOSE")
-##' 	de <- names(geneList)[1:100]
-##' 	yy <- enrichGO(de, 'org.Hs.eg.db', ont="BP", pvalueCutoff=0.01)
-##' 	head(yy)
-##' }
+#' GO Enrichment Analysis of a gene set.
+#' Given a vector of genes, this function will return the enrichment GO
+#' categories after FDR control.
+#'
+#'
+#' @param gene a vector of entrez gene id.
+#' @param OrgDb OrgDb
+#' @param keyType keytype of input gene
+#' @param ont One of "BP", "MF", and "CC" subontologies, or "ALL" for all three.
+#' @inheritParams enricher
+#' @param minGSSize minimal size of genes annotated by Ontology term for testing.
+#' @param maxGSSize maximal size of genes annotated for testing
+#' @param readable whether mapping gene ID to gene Name
+#' @param pool If ont='ALL', whether pool 3 GO sub-ontologies
+#' @return An \code{enrichResult} instance.
+#' @importClassesFrom enrichit enrichResult
+#' @importFrom enrichit setReadable
+#' @importFrom utils stack
+#' @seealso [enrichResult-class], [compareCluster]
+#' @keywords manip
+#' @export
+#' @author Guangchuang Yu \url{https://yulab-smu.top}
+#' @examples
+#' \dontrun{
+#'   data(geneList, package = "DOSE")
+#' 	de <- names(geneList)[1:100]
+#' 	yy <- enrichGO(de, 'org.Hs.eg.db', ont="BP", pvalueCutoff=0.01)
+#' 	head(yy)
+#' }
 enrichGO <- function(
     gene,
     OrgDb,
@@ -80,7 +81,7 @@ enrichGO <- function(
         res@result <- df
         res@geneSets <- geneSets
     } else {
-        res <- enricher_internal(
+        res <- enrichit::ora_gson(
             gene,
             pvalueCutoff = pvalueCutoff,
             pAdjustMethod = pAdjustMethod,
@@ -88,7 +89,7 @@ enrichGO <- function(
             qvalueCutoff = qvalueCutoff,
             minGSSize = minGSSize,
             maxGSSize = maxGSSize,
-            USER_DATA = GO_DATA
+            gson = GO_DATA
         )
 
         if (is.null(res)) {
@@ -111,10 +112,10 @@ enrichGO <- function(
     return(res)
 }
 
-##' @importFrom AnnotationDbi keys
-##' @importFrom AnnotationDbi keytypes
-##' @importFrom AnnotationDbi toTable
-##' @importFrom GO.db GOTERM
+#' @importFrom AnnotationDbi keys
+#' @importFrom AnnotationDbi keytypes
+#' @importFrom AnnotationDbi toTable
+#' @importFrom GO.db GOTERM
 get_GO_data <- function(OrgDb, ont, keytype) {
     GO_Env <- get_GO_Env()
     use_cached <- FALSE
@@ -124,53 +125,29 @@ get_GO_data <- function(OrgDb, ont, keytype) {
         ont2 <- get("ont", envir = GO_Env)
     }
 
-    if (
-        exists("organism", envir = GO_Env, inherits = FALSE) &&
-            exists("keytype", envir = GO_Env, inherits = FALSE) &&
-            !is.null(ont2)
-    ) {
+    if (exists("organism", envir = GO_Env, inherits = FALSE) &&
+        exists("keytype", envir = GO_Env, inherits = FALSE) &&
+        !is.null(ont2)) {
+        
         org <- get("organism", envir = GO_Env)
         kt <- get("keytype", envir = GO_Env)
 
-        if (
-            org == get_organism(OrgDb) &&
-                keytype == kt &&
-                (ont == ont2 || ont2 == "ALL") &&
-                exists("goAnno", envir = GO_Env, inherits = FALSE)
-        ) {
-            ## https://github.com/GuangchuangYu/clusterProfiler/issues/182
-            ## && exists("GO2TERM", envir=GO_Env, inherits=FALSE)){
-
+        if (org == get_organism(OrgDb) &&
+            keytype == kt &&
+            (ont == ont2 || ont2 == "ALL") &&
+            exists("goAnno", envir = GO_Env, inherits = FALSE)) {
             use_cached <- TRUE
         }
     }
 
     if (use_cached) {
         goAnno <- get("goAnno", envir = GO_Env)
-        if (!is.null(ont2) && ont2 != ont) {
-            ## ont2 == "ALL"
-            goAnno <- goAnno[goAnno$ONTOLOGYALL == ont, ]
-        }
     } else {
         OrgDb <- load_OrgDb(OrgDb)
         kt <- keytypes(OrgDb)
         if (!keytype %in% kt) {
             stop("keytype is not supported...")
         }
-
-        kk <- keys(OrgDb, keytype = keytype)
-
-        ## --> take too much memory
-        ##
-        ## goAnno <- suppressMessages(
-        ##     select(OrgDb, keys=kk, keytype=keytype,
-        ##            columns=c("GOALL", "ONTOLOGYALL")))
-
-        ## if (ont == "ALL") {
-        ##     GO2GENE <- unique(goAnno[, c(2,1)])
-        ## } else {
-        ##     GO2GENE <- unique(goAnno[goAnno$ONTOLOGYALL == ont, c(2,1)])
-        ## }
 
         goterms <- AnnotationDbi::Ontology(GO.db::GOTERM)
         if (ont != "ALL") {
@@ -196,26 +173,29 @@ get_GO_data <- function(OrgDb, ont, keytype) {
         assign("organism", get_organism(OrgDb), envir = GO_Env)
     }
 
-    ## if (ont == "ALL") {
-    ##     GO2GENE <- unique(goAnno[, c(2,1)])
-    ## } else {
-    ##     GO2GENE <- unique(goAnno[goAnno$ONTOLOGYALL == ont, c(2,1)])
-    ## }
-    GO2GENE <- unique(goAnno[, c(2, 1)])
-
-    GO_DATA <- build_Anno(GO2GENE, get_GO2TERM_table())
-
-    goOnt.df <- goAnno[, c("GOALL", "ONTOLOGYALL")] %>% unique
-
-    if (!is.null(ont2) && ont2 == "ALL") {
-        return(GO_DATA)
+    # Filter if needed (if cached was ALL but we want specific)
+    if (ont != "ALL") {
+        goAnno <- goAnno[goAnno$ONTOLOGYALL == ont, ]
     }
 
-    goOnt <- goOnt.df[, 2]
-    names(goOnt) <- goOnt.df[, 1]
-    assign("GO2ONT", goOnt, envir = GO_DATA)
-
-    return(GO_DATA)
+    # Build GSON
+    GO2GENE <- unique(goAnno[, c(2, 1)])
+    gsid2gene <- GO2GENE
+    colnames(gsid2gene) <- c("gsid", "gene")
+    
+    termmap <- get_GO2TERM_table()
+    gsid2name <- termmap[termmap$go_id %in% gsid2gene$gsid, ]
+    colnames(gsid2name) <- c("gsid", "name")
+    
+    gson_obj <- gson::gson(gsid2gene = gsid2gene,
+                           gsid2name = gsid2name,
+                           species = get_organism(OrgDb),
+                           gsname = paste0("GO_", ont),
+                           keytype = keytype,
+                           version = "unknown",
+                           accessed_date = as.character(Sys.Date()))
+    
+    return(gson_obj)
 }
 
 get_GO_Env <- function() {
@@ -228,12 +208,12 @@ get_GO_Env <- function() {
 }
 
 
-## ##' @importMethodsFrom AnnotationDbi Ontology
-## ##' @importFrom GO.db GOTERM
-## ##' @importMethodsFrom AnnotationDbi mappedkeys
-## ##' @importFrom plyr dlply
-## ##' @importFrom plyr .
-## ##' @importClassesFrom methods data.frame
+## #' @importMethodsFrom AnnotationDbi Ontology
+## #' @importFrom GO.db GOTERM
+## #' @importMethodsFrom AnnotationDbi mappedkeys
+## #' @importFrom plyr dlply
+## #' @importFrom plyr .
+## #' @importClassesFrom methods data.frame
 ## EXTID2TERMID.GO <- function(gene, ont, organism) {
 
 ##     gene <- as.character(gene)
@@ -290,8 +270,8 @@ get_GO_Env <- function() {
 ##     return(qExtID2GO)
 ## }
 
-## ##' @importMethodsFrom AnnotationDbi mget
-## ##' @importFrom GOSemSim getSupported_Org
+## #' @importMethodsFrom AnnotationDbi mget
+## #' @importFrom GOSemSim getSupported_Org
 ## TERMID2EXTID.GO <- function(term, organism, ...) {
 ##     term <- as.character(term)
 
@@ -331,8 +311,8 @@ get_GO_Env <- function() {
 ##     return(GO2ALLEG)
 ## }
 
-## ##' @importMethodsFrom AnnotationDbi mappedkeys
-## ##' @importFrom GOSemSim getSupported_Org
+## #' @importMethodsFrom AnnotationDbi mappedkeys
+## #' @importFrom GOSemSim getSupported_Org
 ## ALLEXTID.GO <- function(organism) {
 ##     supported_Org <- getSupported_Org()
 ##     if (organism %in% supported_Org) {
@@ -361,18 +341,18 @@ get_GO_Env <- function() {
 ##     return(extID)
 ## }
 
-##' drop GO term of specific level or specific terms (mostly too general).
-##'
-##'
-##' @title dropGO
-##' @param x an instance of 'enrichResult' or 'compareClusterResult'
-##' @param level GO level
-##' @param term GO term
-##' @return modified version of x
-##' @importFrom GO.db GOTERM
-##' @importFrom AnnotationDbi Ontology
-##' @export
-##' @author Guangchuang Yu
+#' drop GO term of specific level or specific terms (mostly too general).
+#'
+#'
+#' @title dropGO
+#' @param x an instance of 'enrichResult' or 'compareClusterResult'
+#' @param level GO level
+#' @param term GO term
+#' @return modified version of x
+#' @importFrom GO.db GOTERM
+#' @importFrom AnnotationDbi Ontology
+#' @export
+#' @author Guangchuang Yu
 dropGO <- function(x, level = NULL, term = NULL) {
     if (!(is(x, "enrichResult") || is(x, "compareClusterResult"))) {
         stop(

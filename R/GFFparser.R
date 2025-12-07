@@ -1,12 +1,12 @@
-##' read GFF file and build gene information table
-##'
-##' given a GFF file, this function extracts information from it and save it in working directory
-##' @title Gff2GeneTable
-##' @param gffFile GFF file
-##' @param compress compress file or not
-##' @return file save.
-##' @export
-##' @author Yu Guangchuang
+#' read GFF file and build gene information table
+#'
+#' given a GFF file, this function extracts information from it and save it in working directory
+#' @title Gff2GeneTable
+#' @param gffFile GFF file
+#' @param compress compress file or not
+#' @return file save.
+#' @export
+#' @author Yu Guangchuang
 Gff2GeneTable <- function(gffFile, compress=TRUE) {
     gff <- readGff(gffFile)
 
@@ -47,7 +47,7 @@ Gff2GeneTable <- function(gffFile, compress=TRUE) {
 ## Gff2GeneTable("NC_007297.gff")
 ##
 ##
-##' @importFrom utils read.table
+#' @importFrom utils read.table
 readGff <- function(gffFile, nrows = -1) {
     cat("Reading ", gffFile, ": ", sep="")
     gff <- read.table(gffFile, sep="\t", as.is=TRUE, quote="\"", fill=TRUE,

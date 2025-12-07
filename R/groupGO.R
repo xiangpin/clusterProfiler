@@ -1,30 +1,30 @@
-##' Functional Profile of a gene set at specific GO level.
-##' Given a vector of genes, this function will return the GO profile at
-##' a specific level.
-##'
-##'
-##' @param gene a vector of entrez gene id.
-##' @param OrgDb OrgDb
-##' @param keyType key type of input gene
-##' @param ont One of "MF", "BP", and "CC" subontologies.
-##' @param level Specific GO Level.
-##' @param readable if readable is TRUE, the gene IDs will mapping to gene
-##'   symbols.
-##' @return A \code{groupGOResult} instance.
-##' @seealso [groupGOResult-class], [compareCluster]
-##' @keywords manip
-##' @importFrom methods new
-##' @importClassesFrom methods data.frame
-##' @importFrom DOSE setReadable
-##' @export
-##' @author Guangchuang Yu \url{https://yulab-smu.top}
-##' @examples
-##'
-##' 	data(gcSample)
-##' 	yy <- groupGO(gcSample[[1]], 'org.Hs.eg.db', ont="BP", level=2)
-##' 	head(summary(yy))
-##' 	#plot(yy)
-##'
+#' Functional Profile of a gene set at specific GO level.
+#' Given a vector of genes, this function will return the GO profile at
+#' a specific level.
+#'
+#'
+#' @param gene a vector of entrez gene id.
+#' @param OrgDb OrgDb
+#' @param keyType key type of input gene
+#' @param ont One of "MF", "BP", and "CC" subontologies.
+#' @param level Specific GO Level.
+#' @param readable if readable is TRUE, the gene IDs will mapping to gene
+#'   symbols.
+#' @return A \code{groupGOResult} instance.
+#' @seealso [groupGOResult-class], [compareCluster]
+#' @keywords manip
+#' @importFrom methods new
+#' @importClassesFrom methods data.frame
+#' @importFrom enrichit setReadable
+#' @export
+#' @author Guangchuang Yu \url{https://yulab-smu.top}
+#' @examples
+#'
+#' 	data(gcSample)
+#' 	yy <- groupGO(gcSample[[1]], 'org.Hs.eg.db', ont="BP", level=2)
+#' 	head(summary(yy))
+#' 	#plot(yy)
+#'
 groupGO <- function(
     gene,
     OrgDb,
@@ -36,11 +36,20 @@ groupGO <- function(
     ont %<>% toupper
     ont <- match.arg(ont, c("BP", "CC", "MF"))
 
+    OrgDb <- yulab.utils::load_OrgDb(OrgDb)
+
     GO_DATA <- get_GO_data(OrgDb, ont, keyType)
 
     GOLevel <- getGOLevel(ont, level) ##get GO IDs of specific level.
 
     GO2ExtID <- TERMID2EXTID(GOLevel, GO_DATA) ## mapping GOID to External Gene IDs.
+
+    if (is.null(GO2ExtID)) {
+        GO2ExtID <- stats::setNames(replicate(length(GOLevel), character(0), simplify = FALSE), GOLevel)
+    } else if (length(GO2ExtID) != length(GOLevel)) {
+        GO2ExtID <- GO2ExtID[as.character(GOLevel)]
+        names(GO2ExtID) <- as.character(GOLevel)
+    }
 
     gene <- unique(gene)
 
@@ -55,6 +64,15 @@ groupGO <- function(
     Count <- unlist(lapply(geneID.list, length))
     GeneRatio <- paste(Count, length(unique(unlist(gene))), sep = "/")
     Descriptions <- TERM2NAME(GOLevel, GO_DATA)
+    if (is.null(Descriptions)) {
+        Descriptions <- rep(NA, length(GOLevel))
+    }
+    
+    if (length(Descriptions) != length(GOLevel)) {
+        Descriptions <- Descriptions[match(GOLevel, names(Descriptions))]
+    }
+    names(Descriptions) <- as.character(GOLevel)
+    
     result = data.frame(
         ID = as.character(GOLevel),
         Description = Descriptions,

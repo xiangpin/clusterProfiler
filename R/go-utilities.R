@@ -1,12 +1,12 @@
 
-##' convert goid to descriptive term
-##'
-##'
-##' @title go2term
-##' @param goid a vector of GO IDs
-##' @return data.frame
-##' @export
-##' @author Guangchuang Yu
+#' convert goid to descriptive term
+#'
+#'
+#' @title go2term
+#' @param goid a vector of GO IDs
+#' @return data.frame
+#' @export
+#' @author Guangchuang Yu
 go2term <- function(goid) {
     GO2TERM <- get_GO2TERM_table()
     res <- GO2TERM[GO2TERM[,1] %in% goid, ]
@@ -14,14 +14,14 @@ go2term <- function(goid) {
     return(res)
 }
 
-##' convert goid to ontology (BP, CC, MF)
-##'
-##'
-##' @title go2ont
-##' @param goid a vector of GO IDs
-##' @return data.frame
-##' @export
-##' @author Guangchuang Yu
+#' convert goid to ontology (BP, CC, MF)
+#'
+#'
+#' @title go2ont
+#' @param goid a vector of GO IDs
+#' @return data.frame
+#' @export
+#' @author Guangchuang Yu
 go2ont <- function(goid) {
     GO2Ontology <- get_GO2Ontology_table()
     res <- GO2Ontology[GO2Ontology[,1] %in% goid,]
@@ -91,19 +91,19 @@ keepGOterm <- function(x, term) {
     return(x)
 }
 
-##' query GOIDs at a specific level.
-##'
-##'
-##' @title get GOIDs at a specific level
-##' @param ont Ontology
-##' @param level GO level
-##' @return a vector of GOIDs
-##' @importFrom GO.db GOBPCHILDREN
-##' @importFrom GO.db GOCCCHILDREN
-##' @importFrom GO.db GOMFCHILDREN
-##' @importMethodsFrom AnnotationDbi mget
-##' @author Guangchuang Yu \url{https://yulab-smu.top}
-##' @noRd
+#' query GOIDs at a specific level.
+#'
+#'
+#' @title get GOIDs at a specific level
+#' @param ont Ontology
+#' @param level GO level
+#' @return a vector of GOIDs
+#' @importFrom GO.db GOBPCHILDREN
+#' @importFrom GO.db GOCCCHILDREN
+#' @importFrom GO.db GOMFCHILDREN
+#' @importMethodsFrom AnnotationDbi mget
+#' @author Guangchuang Yu \url{https://yulab-smu.top}
+#' @noRd
 getGOLevel <- function(ont, level) {
     switch(ont,
            MF = {

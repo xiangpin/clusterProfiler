@@ -1,12 +1,12 @@
-##' filter GO enriched result at specific level
-##'
-##' 
-##' @title gofilter
-##' @param x output from enrichGO or compareCluster
-##' @param level GO level
-##' @return updated object
-##' @export
-##' @author Guangchuang Yu
+#' filter GO enriched result at specific level
+#'
+#' 
+#' @title gofilter
+#' @param x output from enrichGO or compareCluster
+#' @param level GO level
+#' @return updated object
+#' @export
+#' @author Guangchuang Yu
 gofilter <- function(x, level=4) {
     ID <- NULL ## to satisfy codetools for using ID in subset function
     ont <- get_go_ontology(x)
