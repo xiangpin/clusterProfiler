@@ -35,6 +35,7 @@ jobs:
             any::devtools
             YuLab-SMU/yulab.utils
             YuLab-SMU/enrichit
+            YuLab-SMU/GOSemSim
             YuLab-SMU/DOSE
             local::.
           needs: check
