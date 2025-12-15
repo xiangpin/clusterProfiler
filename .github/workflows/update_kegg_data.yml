@@ -7,41 +7,18 @@ on:
   workflow_dispatch:
 
 jobs:
-  get-branches:
-    runs-on: ubuntu-latest
-    outputs:
-      branches: ${{ steps.set-branches.outputs.branches }}
-    steps:
-      - name: Get branches
-        id: set-branches
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPO: ${{ github.repository }}
-        run: |
-          # Get branches matching 'devel' or 'RELEASE_*'
-          # Using gh cli to fetch branches
-          branches=$(gh api repos/$REPO/branches --paginate --jq '[.[] | select(.name == "devel" or (.name | test("^RELEASE_"))) | .name]')
-          echo "branches=$branches" >> $GITHUB_OUTPUT
-
   update-data:
-    needs: get-branches
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        branch: ${{ fromJson(needs.get-branches.outputs.branches) }}
-    
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
     permissions:
       contents: write
-      pull-requests: write
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          ref: ${{ matrix.branch }}
+          ref: devel
 
       - name: Setup R
         uses: r-lib/actions/setup-r@v2
@@ -84,6 +61,5 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./staging
-          destination_dir: ${{ matrix.branch }}
           keep_files: true
-          commit_message: "Deploy data for ${{ matrix.branch }}"
+          commit_message: "Deploy KEGG data"
