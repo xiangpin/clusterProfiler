@@ -11,7 +11,7 @@ TODO:
   - e.g. independent test for different omics data and then combine results
 -->
 
-# clusterProfiler 4.19.2.002
+# clusterProfiler 4.19.3
 
 + instead of packing KEGG cache data in the package, we now download it from <https://yulab-smu.top/clusterProfiler> (2025-12-15, Mon)
 + add github action to automatically update KEGG cache data (2025-12-09, Tue)
