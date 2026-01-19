@@ -11,7 +11,7 @@ TODO:
   - e.g. independent test for different omics data and then combine results
 -->
 
-# clusterProfiler 4.19.3.001
+# clusterProfiler 4.19.4
 
 + `interpret()` now supports `task` parameter to specify the task: 'interpretation', 'annotation' and 'phenotyping' (2025-01-18, Sat)
 + `interpret()` supports `enrichResult`, `gseResult`, `compareClusterResult` and `list` of enrichment results (2025-01-18, Sat)
