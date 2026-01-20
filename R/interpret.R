@@ -13,7 +13,7 @@
 ##' @return A character string containing the LLM-generated interpretation.
 ##' @author Guangchuang Yu
 ##' @export
-interpret <- function(x, context = NULL, n_pathways = 20, model = "deepseek-chat", api_key = NULL, task = "interpretation") {
+interpret <- function(x, context = NULL, n_pathways = 20, model = "deepseek-chat", api_key = NULL, task = "interpretation", prior = NULL) {
     if (missing(x)) {
         stop("enrichment result 'x' is required.")
     }
@@ -40,9 +40,19 @@ interpret <- function(x, context = NULL, n_pathways = 20, model = "deepseek-chat
             collapse="\n"
         )
         
+        # Determine prior for this cluster
+        current_prior <- NULL
+        if (!is.null(prior)) {
+            if (length(prior) == 1 && is.null(names(prior))) {
+                 current_prior <- prior
+            } else if (name %in% names(prior)) {
+                 current_prior <- prior[[name]]
+            }
+        }
+        
         # Construct Prompt based on task
         if (task == "annotation" || task == "cell_type") {
-            prompt <- construct_annotation_prompt(pathway_text, context, name)
+            prompt <- construct_annotation_prompt(pathway_text, context, name, current_prior)
         } else if (task == "phenotype" || task == "phenotyping") {
             prompt <- construct_phenotype_prompt(pathway_text, context, name)
         } else {
@@ -68,6 +78,78 @@ interpret <- function(x, context = NULL, n_pathways = 20, model = "deepseek-chat
         class(results) <- c("interpretation_list", "list")
         return(results)
     }
+}
+
+#' Interpret enrichment results using a hierarchical strategy (Major -> Minor clusters)
+#'
+#' @title interpret_hierarchical
+#' @param x_minor Enrichment result for sub-clusters (e.g., compareClusterResult or list of enrichResult).
+#' @param x_major Enrichment result for major clusters.
+#' @param mapping A named vector mapping sub-cluster IDs (names in x_minor) to major cluster IDs (names in x_major).
+#' @param model LLM model.
+#' @param api_key API key.
+#' @param task Task type, default is "cell_type".
+#' @return A list of interpretation results.
+#' @author Guangchuang Yu
+#' @export
+interpret_hierarchical <- function(x_minor, x_major, mapping, model = "deepseek-chat", api_key = NULL, task = "cell_type") {
+    
+    # 1. Interpret Major Clusters
+    message("Step 1: Interpreting Major Clusters to establish lineage context...")
+    res_major <- interpret(x_major, context = NULL, model = model, api_key = api_key, task = "cell_type")
+    
+    # 2. Interpret Sub-clusters with Context
+    message("Step 2: Interpreting Sub-clusters using hierarchical constraints...")
+    
+    # Use internal helper to process x_minor into list of dataframes
+    res_list_minor <- process_enrichment_input(x_minor, n_pathways = 20)
+    
+    results <- lapply(names(res_list_minor), function(name) {
+        # name is the sub-cluster ID
+        
+        # Determine Major Context
+        specific_context <- NULL
+        if (name %in% names(mapping)) {
+            major_id <- mapping[[name]]
+            
+            # Extract major result
+            major_info <- NULL
+            if (inherits(res_major, "interpretation_list") && major_id %in% names(res_major)) {
+                major_info <- res_major[[major_id]]
+            } else if (inherits(res_major, "interpretation")) {
+                # Handle case where res_major might be a single result (if only 1 major cluster)
+                # Check if it matches major_id or is just default
+                if (!is.null(res_major$cluster) && res_major$cluster == major_id) {
+                     major_info <- res_major
+                } else if (is.null(res_major$cluster)) {
+                     # Assume it's the only one
+                     major_info <- res_major
+                }
+            }
+            
+            if (!is.null(major_info) && !is.null(major_info$cell_type)) {
+                 major_label <- major_info$cell_type
+                 specific_context <- paste0("Hierarchical Constraint: This cluster is a confirmed subcluster of the '", major_label, "' lineage (identified in major cluster analysis). Please focus on distinguishing the specific subtype or state within this lineage.")
+            }
+        }
+        
+        if (is.null(specific_context)) {
+            warning(paste("No major lineage context found for sub-cluster:", name))
+        }
+        
+        # Call interpret for this single cluster
+        # We pass the dataframe directly
+        res <- interpret(res_list_minor[[name]], context = specific_context, model = model, api_key = api_key, task = task)
+        
+        # Ensure cluster name is preserved
+        if (is.list(res)) res$cluster <- name
+        
+        return(res)
+    })
+    
+    names(results) <- names(res_list_minor)
+    class(results) <- c("interpretation_list", "list")
+    return(results)
 }
 
 process_enrichment_input <- function(x, n_pathways) {
@@ -153,16 +235,35 @@ Ensure the response is a valid JSON object. Do not include any markdown formatti
     return(base_prompt)
 }
 
-construct_annotation_prompt <- function(pathways, context, cluster_id) {
+construct_annotation_prompt <- function(pathways, context, cluster_id, prior = NULL) {
     base_prompt <- paste0("You are an expert cell biologist. I have a cell cluster (", cluster_id, ") from a single-cell RNA-seq experiment.")
     
     if (!is.null(context) && context != "") {
         base_prompt <- paste0(base_prompt, "\n\nExperimental Context:\n", context)
     }
     
-    base_prompt <- paste0(base_prompt, "\n\nEnriched Terms (Marker Genes/Pathways):\n", pathways)
-    
-    base_prompt <- paste0(base_prompt, "\n\nBased on these enrichment results, identify the cell type of this cluster. 
+    if (!is.null(prior) && prior != "") {
+        base_prompt <- paste0(base_prompt, "\n\nPreliminary Annotation (from automated tool):\n", prior)
+        base_prompt <- paste0(base_prompt, "\n\nEnriched Terms (Marker Genes/Pathways):\n", pathways)
+        
+        base_prompt <- paste0(base_prompt, "\n\nTask:
+Please validate and refine the preliminary annotation based on the enrichment evidence. Use the following logic:
+1. **Validation**: Do the pathways support the preliminary label?
+2. **Refinement**: Can you assign a more specific subtype or functional state (e.g., refine 'T cells' to 'CD8+ Exhausted T cells' based on 'PD-1 signaling')?
+3. **Correction**: If the evidence strongly contradicts the preliminary label, propose the correct cell type.
+
+Provide the result as a JSON object with the following keys:
+- cell_type: The final identified cell type label (refined or corrected).
+- refinement_status: 'Confirmed', 'Refined', or 'Corrected'.
+- confidence: 'High', 'Medium', or 'Low'.
+- reasoning: Explain why you confirmed, refined, or corrected the label, citing specific evidence.
+- markers: A list of key markers or pathways from the input that support this decision.
+
+Ensure the response is a valid JSON object. Do not include any markdown formatting (like ```json).")
+    } else {
+        base_prompt <- paste0(base_prompt, "\n\nEnriched Terms (Marker Genes/Pathways):\n", pathways)
+        
+        base_prompt <- paste0(base_prompt, "\n\nBased on these enrichment results, identify the cell type of this cluster. 
 Use the following logic:
 1. Analyze the specific marker genes or cell type signatures present in the terms.
 2. Analyze the functional pathways (e.g., KEGG, Reactome) to infer cell state or function.
@@ -175,6 +276,7 @@ Provide the result as a JSON object with the following keys:
 - markers: A list of key markers or pathways from the input that support this decision.
 
 Ensure the response is a valid JSON object. Do not include any markdown formatting (like ```json).")
+    }
     
     return(base_prompt)
 }

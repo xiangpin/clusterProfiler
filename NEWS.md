@@ -11,10 +11,15 @@ TODO:
   - e.g. independent test for different omics data and then combine results
 -->
 
+# clusterProfiler 4.19.4.001
+
++ `interpret_hierarchical()` for hierarchical interpretation (e.g. Major -> Minor clusters) (2026-01-20, Tue)
++ `interpret()` now supports `prior` parameter for reference-guided interpretation (e.g. from SingleR/scGPT) (2026-01-20, Tue)
+
 # clusterProfiler 4.19.4
 
 + `interpret()` now supports `task` parameter to specify the task: 'interpretation', 'annotation' and 'phenotyping' (2025-01-18, Sat)
-+ `interpret()` supports `enrichResult`, `gseResult`, `compareClusterResult` and `list` of enrichment results (2025-01-18, Sat)
++ `interpret()` supports `enrichResult`, `gseaResult`, `compareClusterResult` and `list` of enrichment results (2025-01-18, Sat)
 
 # clusterProfiler 4.19.3
 
