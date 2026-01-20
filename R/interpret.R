@@ -13,6 +13,247 @@
 ##' @return A character string containing the LLM-generated interpretation.
 ##' @author Guangchuang Yu
 ##' @export
+#' Interpret enrichment results using a multi-agent system (Deep Mode)
+#'
+#' This function employs a multi-agent strategy to provide a more rigorous and comprehensive
+#' biological interpretation. It breaks down the task into three specialized agents:
+#' 1. Agent Cleaner: Filters noise and selects relevant pathways.
+#' 2. Agent Detective: Identifies key regulators and functional modules using PPI/TF data.
+#' 3. Agent Synthesizer: Synthesizes findings into a coherent narrative.
+#'
+#' @title interpret_agent
+#' @param x An enrichment result object (e.g., `enrichResult` or `gseaResult`).
+#' @param context A string describing the experimental background.
+#' @param n_pathways Number of top pathways to consider initially. Default is 50 (Agent 1 will filter them).
+#' @param model The LLM model to use.
+#' @param api_key The API key for the LLM.
+#' @param add_ppi Boolean, whether to use PPI network integration.
+#' @param gene_fold_change Named vector of logFC for expression context.
+#' @return A detailed interpretation list.
+#' @author Guangchuang Yu
+#' @export
+interpret_agent <- function(x, context = NULL, n_pathways = 50, model = "deepseek-chat", api_key = NULL, add_ppi = FALSE, gene_fold_change = NULL) {
+    if (missing(x)) {
+        stop("enrichment result 'x' is required.")
+    }
+    
+    # Process input into a list of data frames (one per cluster/group)
+    res_list <- process_enrichment_input(x, n_pathways)
+    
+    if (length(res_list) == 0) {
+        return("No significant pathways found to interpret.")
+    }
+    
+    # Process each cluster with the multi-agent pipeline
+    results <- lapply(names(res_list), function(name) {
+        df <- res_list[[name]]
+        if (nrow(df) == 0) return(NULL)
+        
+        message(sprintf("Processing cluster '%s' with Agent 1: The Cleaner...", name))
+        
+        # Format initial pathways for Agent 1
+        cols_to_keep <- intersect(c("ID", "Description", "GeneRatio", "NES", "p.adjust", "pvalue", "geneID"), names(df))
+        pathway_text <- paste(
+            apply(df[, cols_to_keep, drop=FALSE], 1, function(row) {
+                paste(names(row), row, sep=": ", collapse=", ")
+            }),
+            collapse="\n"
+        )
+        
+        # --- Step 1: Agent Cleaner ---
+        clean_res <- run_agent_cleaner(pathway_text, context, model, api_key)
+        if (is.null(clean_res) || is.null(clean_res$kept_pathways)) {
+            warning("Agent Cleaner failed or returned empty results. Falling back to using top pathways.")
+            cleaned_pathways <- pathway_text # Fallback
+        } else {
+            # Re-construct pathway text from kept pathways (assuming Agent 1 returns a list of names/IDs)
+            # For simplicity, we pass the Agent's reasoning and selected list to the next step
+            cleaned_pathways <- paste("Selected Relevant Pathways (filtered by Agent Cleaner):", 
+                                      paste(clean_res$kept_pathways, collapse=", "), 
+                                      "\nReasoning:", clean_res$reasoning, sep="\n")
+        }
+        
+        # --- Step 2: Agent Detective ---
+        message(sprintf("Processing cluster '%s' with Agent 2: The Detective...", name))
+        
+        # Prepare Network Data (PPI)
+        ppi_network_text <- NULL
+        if (add_ppi) {
+            # Extract genes from the ORIGINAL top list (to ensure coverage) or just the cleaned ones?
+            # Better to use genes from the cleaned pathways to stay focused, but for robustness, let's use the top genes from input df
+            all_genes <- unique(unlist(strsplit(df$geneID, "/")))
+            if (length(all_genes) > 0) {
+                # Reuse the PPI fetching logic (simplified here, ideally modularized)
+                input_for_ppi <- head(all_genes, 50)
+                # Try to get organism
+                current_taxID <- "auto"
+                if (inherits(x, "enrichResult") && !is.list(x)) {
+                     current_taxID <- tryCatch(getTaxID(x@organism), error=function(e) "auto")
+                }
+                
+                g <- tryCatch(getPPI(input_for_ppi, taxID = current_taxID, output = "igraph", network_type = "functional"), error=function(e) NULL)
+                
+                if (!is.null(g)) {
+                     el <- igraph::as_data_frame(g, what="edges")
+                     if (nrow(el) > 0) {
+                         if ("score" %in% names(el)) el <- el[order(el$score, decreasing = TRUE), ]
+                         el_subset <- head(el, 50)
+                         edges_text <- apply(el_subset, 1, function(row) {
+                             score_info <- ""
+                             if ("score" %in% names(row)) score_info <- paste0(" (Score: ", row["score"], ")")
+                             paste0(row["from"], " -- ", row["to"], score_info)
+                         })
+                         ppi_network_text <- paste(edges_text, collapse = "\n")
+                     }
+                }
+            }
+        }
+        
+        # Prepare Fold Change Data
+        fc_text <- NULL
+        if (!is.null(gene_fold_change)) {
+             all_genes <- unique(unlist(strsplit(df$geneID, "/")))
+             common_genes <- intersect(all_genes, names(gene_fold_change))
+             if (length(common_genes) > 0) {
+                 fc_subset <- gene_fold_change[common_genes]
+                 fc_subset <- fc_subset[order(abs(fc_subset), decreasing = TRUE)]
+                 top_fc <- head(fc_subset, 20)
+                 fc_text <- paste(names(top_fc), round(top_fc, 2), sep = ":", collapse = ", ")
+             }
+        }
+        
+        detective_res <- run_agent_detective(cleaned_pathways, ppi_network_text, fc_text, context, model, api_key)
+        
+        # --- Step 3: Agent Synthesizer ---
+        message(sprintf("Processing cluster '%s' with Agent 3: The Storyteller...", name))
+        
+        final_res <- run_agent_synthesizer(cleaned_pathways, detective_res, context, model, api_key)
+        
+        # Post-processing: Add cluster name and parse refined network if available
+        if (is.list(final_res)) {
+            final_res$cluster <- name
+            
+            # Merge Detective findings into final result for transparency
+            if (!is.null(detective_res)) {
+                final_res$regulatory_drivers <- detective_res$key_drivers
+                final_res$refined_network <- detective_res$refined_network
+                final_res$network_evidence <- detective_res$network_evidence
+            }
+            
+            # Helper to parse refined network to igraph
+            if (!is.null(final_res$refined_network)) {
+                rn_df <- tryCatch({
+                    if (is.data.frame(final_res$refined_network)) {
+                        final_res$refined_network
+                    } else {
+                        do.call(rbind, lapply(final_res$refined_network, as.data.frame))
+                    }
+                }, error = function(e) NULL)
+                
+                if (!is.null(rn_df) && nrow(rn_df) > 0) {
+                     colnames(rn_df)[colnames(rn_df) == "source"] <- "from"
+                     colnames(rn_df)[colnames(rn_df) == "target"] <- "to"
+                     if ("from" %in% names(rn_df) && "to" %in% names(rn_df)) {
+                         final_res$network <- igraph::graph_from_data_frame(rn_df, directed = FALSE)
+                     }
+                }
+            }
+        }
+        
+        return(final_res)
+    })
+    
+    names(results) <- names(res_list)
+    
+    if (length(results) == 1 && names(results)[1] == "Default") {
+        return(results[[1]])
+    } else {
+        class(results) <- c("interpretation_list", "list")
+        return(results)
+    }
+}
+
+run_agent_cleaner <- function(pathways, context, model, api_key) {
+    prompt <- paste0(
+        "You are 'Agent Cleaner', an expert bioinformatics curator.\n",
+        "Your task is to filter a list of enriched pathways to retain only those relevant to the specific experimental context.\n\n",
+        if (!is.null(context)) paste0("Context: ", context, "\n\n") else "",
+        "Raw Enriched Pathways:\n", pathways, "\n\n",
+        "Instructions:\n",
+        "1. Identify and REMOVE 'housekeeping' pathways (e.g., Ribosome, Spliceosome, RNA transport) unless they are specifically relevant to the context (e.g., cancer proliferation).\n",
+        "2. Identify and REMOVE redundant or overly broad terms.\n",
+        "3. KEEP disease-specific, tissue-specific, or phenotype-driving pathways.\n\n",
+        "Output JSON format:\n",
+        "{\n",
+        "  \"kept_pathways\": [\"List of pathway names to keep\"],\n",
+        "  \"discarded_pathways\": [\"List of discarded pathways\"],\n",
+        "  \"reasoning\": \"Brief explanation of the filtering strategy used.\"\n",
+        "}"
+    )
+    
+    call_llm_fanyi(prompt, model, api_key)
+}
+
+run_agent_detective <- function(pathways, ppi_network, fold_change, context, model, api_key) {
+    prompt <- paste0(
+        "You are 'Agent Detective', an expert systems biologist.\n",
+        "Your task is to identify Key Drivers (Regulators) and Functional Modules based on the filtered pathways and available network data.\n\n",
+        if (!is.null(context)) paste0("Context: ", context, "\n\n") else "",
+        "Filtered Pathways:\n", pathways, "\n\n",
+        if (!is.null(ppi_network)) paste0("PPI Network Evidence:\n", ppi_network, "\n\n") else "",
+        if (!is.null(fold_change)) paste0("Gene Fold Changes:\n", fold_change, "\n\n") else "",
+        "Instructions:\n",
+        "1. Identify potential Master Regulators (TFs, Kinases) that explain the pathways.\n",
+        "2. Define Functional Modules (groups of interacting proteins) using the PPI network.\n",
+        "3. Refine the PPI network to a core regulatory sub-network.\n\n",
+        "Output JSON format:\n",
+        "{\n",
+        "  \"key_drivers\": [\"List of top 3-5 driver genes\"],\n",
+        "  \"functional_modules\": [\"List of identified modules (e.g. 'TCR Complex', 'Cell Cycle G1/S')\"],\n",
+        "  \"refined_network\": [{\"source\": \"GeneA\", \"target\": \"GeneB\", \"interaction\": \"activation\", \"reason\": \"evidence\"}],\n",
+        "  \"network_evidence\": \"Narrative describing how the network supports the drivers.\"\n",
+        "}"
+    )
+    
+    call_llm_fanyi(prompt, model, api_key)
+}
+
+run_agent_synthesizer <- function(pathways, detective_report, context, model, api_key) {
+    # Convert detective report to string if it's a list
+    detective_text <- ""
+    if (!is.null(detective_report)) {
+        detective_text <- paste(
+            "Key Drivers: ", paste(detective_report$key_drivers, collapse=", "), "\n",
+            "Functional Modules: ", paste(detective_report$functional_modules, collapse=", "), "\n",
+            "Network Evidence: ", detective_report$network_evidence,
+            sep=""
+        )
+    }
+    
+    prompt <- paste0(
+        "You are 'Agent Storyteller', a senior scientific writer.\n",
+        "Your task is to synthesize the findings from previous agents into a coherent biological narrative.\n\n",
+        if (!is.null(context)) paste0("Context: ", context, "\n\n") else "",
+        "Data Sources:\n",
+        "1. Relevant Pathways:\n", pathways, "\n\n",
+        "2. Detective's Report (Drivers & Modules):\n", detective_text, "\n\n",
+        "Instructions:\n",
+        "1. Write a comprehensive Overview.\n",
+        "2. Explain Key Mechanisms, explicitly linking Regulators -> Modules -> Pathways.\n",
+        "3. Formulate a Hypothesis.\n",
+        "4. Draft a Narrative paragraph for a paper.\n\n",
+        "Output JSON format:\n",
+        "{\n",
+        "  \"overview\": \"...\",\n",
+        "  \"key_mechanisms\": \"...\",\n",
+        "  \"hypothesis\": \"...\",\n",
+        "  \"narrative\": \"...\"\n",
+        "}"
+    )
+    
+    call_llm_fanyi(prompt, model, api_key)
+}
+
 interpret <- function(x, context = NULL, n_pathways = 20, model = "deepseek-chat", api_key = NULL, task = "interpretation", prior = NULL, add_ppi = FALSE, gene_fold_change = NULL) {
     if (missing(x)) {
         stop("enrichment result 'x' is required.")
