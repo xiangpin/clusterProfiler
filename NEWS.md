@@ -11,7 +11,15 @@ TODO:
   - e.g. independent test for different omics data and then combine results
 -->
 
-# clusterProfiler 4.19.4.001
+# clusterProfiler 4.19.4.004
+
++ `interpret()` supports 'Knowledge-Guided Interpretation' (2026-01-20, Tue)
+  - `add_ppi` parameter to integrate PPI network and identify hub genes
+  - `gene_fold_change` parameter to incorporate expression levels
+  - Mixed-source enrichment analysis support (e.g. Pathways + TFs) for causal integration
+  - LLM-guided network refinement to output core regulatory networks
+
+# clusterProfiler 4.19.4.002
 
 + `interpret_hierarchical()` for hierarchical interpretation (e.g. Major -> Minor clusters) (2026-01-20, Tue)
 + `interpret()` now supports `prior` parameter for reference-guided interpretation (e.g. from SingleR/scGPT) (2026-01-20, Tue)
