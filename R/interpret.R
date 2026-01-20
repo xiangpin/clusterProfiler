@@ -1,18 +1,3 @@
-##' Interpret enrichment results using Large Language Models (LLM)
-##'
-##' This function sends the enrichment results (top significant pathways) along with 
-##' an optional experimental context to an LLM (e.g., DeepSeek) to generate 
-##' a biological interpretation, hypothesis, and narrative suitable for a paper.
-##'
-##' @title interpret
-##' @param x An enrichment result object (e.g., `enrichResult` or `gseaResult`).
-##' @param context A string describing the experimental background (e.g., "scRNA-seq of mouse myocardial infarction at day 3").
-##' @param n_pathways Number of top significant pathways to include in the analysis. Default is 20.
-##' @param model The LLM model to use. Default is "deepseek-chat". Supported models include "deepseek-chat", "glm-4", "qwen-turbo" etc.
-##' @param api_key The API key for the LLM. If NULL, it tries to fetch from `getOption('yulab_translate')` based on the model.
-##' @return A character string containing the LLM-generated interpretation.
-##' @author Guangchuang Yu
-##' @export
 #' Interpret enrichment results using a multi-agent system (Deep Mode)
 #'
 #' This function employs a multi-agent strategy to provide a more rigorous and comprehensive
@@ -237,6 +222,21 @@ run_agent_synthesizer <- function(pathways, detective_report, context, model, ap
     call_llm_fanyi(prompt, model, api_key)
 }
 
+#' Interpret enrichment results using Large Language Models (LLM)
+#'
+#' This function sends the enrichment results (top significant pathways) along with 
+#' an optional experimental context to an LLM (e.g., DeepSeek) to generate 
+#' a biological interpretation, hypothesis, and narrative suitable for a paper.
+#'
+#' @title interpret
+#' @param x An enrichment result object (e.g., `enrichResult` or `gseaResult`).
+#' @param context A string describing the experimental background (e.g., "scRNA-seq of mouse myocardial infarction at day 3").
+#' @param n_pathways Number of top significant pathways to include in the analysis. Default is 20.
+#' @param model The LLM model to use. Default is "deepseek-chat". Supported models include "deepseek-chat", "glm-4", "qwen-turbo" etc.
+#' @param api_key The API key for the LLM. If NULL, it tries to fetch from `getOption('yulab_translate')` based on the model.
+#' @return A character string containing the LLM-generated interpretation.
+#' @author Guangchuang Yu
+#' @export
 interpret <- function(x, context = NULL, n_pathways = 20, model = "deepseek-chat", api_key = NULL, task = "interpretation", prior = NULL, add_ppi = FALSE, gene_fold_change = NULL) {
     if (missing(x)) {
         stop("enrichment result 'x' is required.")

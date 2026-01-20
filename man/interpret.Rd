@@ -10,7 +10,10 @@ interpret(
   n_pathways = 20,
   model = "deepseek-chat",
   api_key = NULL,
-  task = "interpretation"
+  task = "interpretation",
+  prior = NULL,
+  add_ppi = FALSE,
+  gene_fold_change = NULL
 )
 }
 \arguments{

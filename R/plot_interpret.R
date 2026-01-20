@@ -1,5 +1,6 @@
 
 #' @method plot interpretation
+#' @title plot
 #' @param x An `interpretation` object.
 #' @param layout Graph layout, default is "nicely".
 #' @param ... Additional arguments passed to `ggtangle::ggtangle`.
