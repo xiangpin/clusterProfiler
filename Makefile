@@ -77,4 +77,6 @@ prerelease:
 	cd data;\
 	Rscript -e 'clusterProfiler:::get_kegg_species(save=TRUE)'
 
+test_interpret:
+	Rscript -e 'source("local_test/test_interpret.R")'
 	

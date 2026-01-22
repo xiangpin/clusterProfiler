@@ -11,8 +11,11 @@ TODO:
   - e.g. independent test for different omics data and then combine results
 -->
 
-# clusterProfiler 4.19.4.006
+# clusterProfiler 4.19.4.008
 
++ `interpret()` prompt optimized with 'Comparative Analysis' and 'Rule of Exclusion' to better distinguish cell types with shared functions (e.g. NK vs CD8+ T cells) using specific marker genes (2026-01-22, Thu)
++ fixed a bug in `interpret()` where empty interpretation results were returned due to incorrect list structure handling in `process_enrichment_input` (2026-01-22, Thu)
++ `interpret()` now considers specific marker genes in cell type annotation to avoid key markers being overshadowed by general pathways (2026-01-21, Wed)
 + optimize `enrichGO()` to avoid memory boom when keyType is not ENTREZID (2026-01-21, Wed, #805)
 + `gson_GO_local()` to support local GO annotation by adding ancestral terms (2026-01-21, Wed)
 + `interpret()` implements a gene-based fallback mode for clusters with no enriched pathways, ensuring comprehensive analysis (2026-01-20, Tue)
@@ -55,11 +58,9 @@ TODO:
 
 + Bioconductor RELEASE_3_22 (2025-10-30, Thu)
 
-
 # clusterProfiler 4.16.0
 
 + Bioconductor RELEASE_3_21 (2025-04-17, Thu)
-
 
 # clusterProfiler 4.15.2
 

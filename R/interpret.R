@@ -286,18 +286,61 @@ interpret <- function(x, context = NULL, n_pathways = 20, model = "deepseek-chat
     
     # Process each item
     results <- lapply(names(res_list), function(name) {
-        df <- res_list[[name]]
-        if (nrow(df) == 0) return(NULL)
+        message(sprintf("Interpreting cluster: %s", name))
+        item <- res_list[[name]]
+        df <- item$df
+        genes <- item$genes
         
-        # Format pathways for prompt
-        # We typically need ID, Description, GeneRatio/NES, p.adjust, geneID
-        cols_to_keep <- intersect(c("ID", "Description", "GeneRatio", "NES", "p.adjust", "pvalue", "geneID"), names(df))
-        pathway_text <- paste(
-            apply(df[, cols_to_keep, drop=FALSE], 1, function(row) {
-                paste(names(row), row, sep=": ", collapse=", ")
-            }),
-            collapse="\n"
-        )
+        # Get raw genes for this cluster to identify specific markers
+        # even if no pathways are enriched or if pathways obscure them
+        if (is.null(genes)) {
+             # Try to get from x if possible (for single result)
+             genes <- tryCatch(process_enrichment_input(x, n_pathways)[[name]]$genes, error=function(e) NULL)
+        }
+        
+        # Top specific genes text
+        top_genes_text <- NULL
+        if (!is.null(genes) && length(genes) > 0) {
+             # If we have fold change, use it to rank
+             if (!is.null(gene_fold_change)) {
+                 common <- intersect(genes, names(gene_fold_change))
+                 if (length(common) > 0) {
+                     fc <- gene_fold_change[common]
+                     # Get top upregulated
+                     top_up <- head(names(fc[order(fc, decreasing = TRUE)]), 20)
+                     top_genes_text <- paste(top_up, collapse = ", ")
+                 } else {
+                     top_genes_text <- paste(head(genes, 20), collapse = ", ")
+                 }
+             } else {
+                 top_genes_text <- paste(head(genes, 20), collapse = ", ")
+             }
+        }
+
+        if (nrow(df) == 0) {
+             # Fallback logic handled inside prompts or earlier?
+             # For now, let's allow empty df if we have genes
+             if (is.null(top_genes_text)) {
+                 res <- list(
+                    cluster = name, 
+                    overview = "No significant pathways enriched and no marker genes available for interpretation.",
+                    confidence = "None"
+                 )
+                 class(res) <- c("interpretation", "list")
+                 return(res)
+             }
+             pathway_text <- "No significant enriched pathways found."
+        } else {
+            # Format pathways for prompt
+            # We typically need ID, Description, GeneRatio/NES, p.adjust, geneID
+            cols_to_keep <- intersect(c("ID", "Description", "GeneRatio", "NES", "p.adjust", "pvalue", "geneID"), names(df))
+            pathway_text <- paste(
+                apply(df[, cols_to_keep, drop=FALSE], 1, function(row) {
+                    paste(names(row), row, sep=": ", collapse=", ")
+                }),
+                collapse="\n"
+            )
+        }
         
         # Determine prior for this cluster
         current_prior <- NULL
@@ -312,8 +355,10 @@ interpret <- function(x, context = NULL, n_pathways = 20, model = "deepseek-chat
         # Determine PPI/Hub Genes info if requested
         ppi_network_text <- NULL
         if (add_ppi) {
-            # Extract all unique genes from the top pathways
-            all_genes <- unique(unlist(strsplit(df$geneID, "/")))
+            # Extract all unique genes from the top pathways OR from the top genes list
+            all_genes <- unique(unlist(strsplit(as.character(df$geneID), "/")))
+            if (length(all_genes) == 0 && !is.null(genes)) all_genes <- head(genes, 50)
+            
             if (length(all_genes) > 0) {
                 ppi_network_text <- .get_ppi_context_text(all_genes, x)
             }
@@ -323,8 +368,10 @@ interpret <- function(x, context = NULL, n_pathways = 20, model = "deepseek-chat
         fc_text <- NULL
         if (!is.null(gene_fold_change)) {
              # gene_fold_change should be a named vector of logFC
-             # We filter for genes present in the pathways
-             all_genes <- unique(unlist(strsplit(df$geneID, "/")))
+             # We filter for genes present in the pathways OR top genes
+             all_genes <- unique(unlist(strsplit(as.character(df$geneID), "/")))
+             if (length(all_genes) == 0 && !is.null(genes)) all_genes <- genes
+             
              common_genes <- intersect(all_genes, names(gene_fold_change))
              
              if (length(common_genes) > 0) {
@@ -340,7 +387,7 @@ interpret <- function(x, context = NULL, n_pathways = 20, model = "deepseek-chat
 
         # Construct Prompt based on task
         if (task == "annotation" || task == "cell_type") {
-            prompt <- construct_annotation_prompt(pathway_text, context, name, current_prior, ppi_network_text, fc_text)
+            prompt <- construct_annotation_prompt(pathway_text, context, name, current_prior, ppi_network_text, fc_text, top_genes_text)
         } else if (task == "phenotype" || task == "phenotyping") {
             prompt <- construct_phenotype_prompt(pathway_text, context, name, ppi_network_text, fc_text)
         } else {
@@ -363,7 +410,13 @@ interpret <- function(x, context = NULL, n_pathways = 20, model = "deepseek-chat
                     if (is.data.frame(res$refined_network)) {
                         res$refined_network
                     } else {
-                        do.call(rbind, lapply(res$refined_network, as.data.frame))
+                        # Check if all elements are lists with same structure
+                        if (all(sapply(res$refined_network, is.list))) {
+                             # Convert each list element to dataframe row
+                             do.call(rbind, lapply(res$refined_network, function(x) as.data.frame(x, stringsAsFactors=FALSE)))
+                        } else {
+                             NULL
+                        }
                     }
                 }, error = function(e) NULL)
                 
@@ -380,7 +433,28 @@ interpret <- function(x, context = NULL, n_pathways = 20, model = "deepseek-chat
                      }
                 }
             }
+        } else if (is.character(res)) {
+            # Handle raw text response fallback
+            res <- list(
+                cluster = name,
+                overview = res, # Put raw text in overview
+                confidence = "Low",
+                reasoning = "Failed to parse structured JSON response from LLM. Raw text provided."
+            )
+            class(res) <- c("interpretation", "list")
         }
+        
+        # If res is NULL (which shouldn't happen with call_llm_fanyi wrapper unless error caught inside and returned NULL, but wrapper returns raw text on error), handle it
+        if (is.null(res)) {
+             res <- list(
+                cluster = name,
+                overview = "Failed to retrieve interpretation from LLM.",
+                confidence = "None",
+                reasoning = "API call failed or returned empty response."
+            )
+            class(res) <- c("interpretation", "list")
+        }
+        
         return(res)
     })
     
@@ -495,7 +569,9 @@ process_enrichment_input <- function(x, n_pathways) {
              return(obj@gene)
         } else if (inherits(obj, "compareClusterResult")) {
              if (!is.null(cluster) && !is.null(obj@geneClusters)) {
-                 return(obj@geneClusters[[cluster]])
+                 if (cluster %in% names(obj@geneClusters)) {
+                     return(obj@geneClusters[[cluster]])
+                 }
              }
         }
         return(NULL)
@@ -503,6 +579,14 @@ process_enrichment_input <- function(x, n_pathways) {
     
     # Check if input is a list of enrichment objects (Mixed Database Strategy)
     if (is.list(x) && !inherits(x, "enrichResult") && !inherits(x, "gseaResult") && !inherits(x, "compareClusterResult") && !is.data.frame(x)) {
+        
+        # Check if it is already a processed item (has 'df' and 'genes')
+        if ("df" %in% names(x) && is.data.frame(x$df)) {
+            # It seems to be a single processed item (e.g. passed from interpret_hierarchical)
+            # Return it as a single-item list
+            return(list(Default = x))
+        }
+        
         # Convert all elements to data frames
         dfs <- lapply(x, get_df)
         
@@ -514,9 +598,11 @@ process_enrichment_input <- function(x, n_pathways) {
         if (has_cluster) {
             # Split by Cluster and get top N for each cluster
             df_list <- split(combined_df, combined_df$Cluster)
-            return(lapply(names(df_list), function(cl_name) {
+            res_list <- lapply(names(df_list), function(cl_name) {
                 list(df = get_top_n(df_list[[cl_name]], n_pathways), genes = NULL) # List input usually doesn't store raw genes in a structured way easily accessible here
-            }))
+            })
+            names(res_list) <- names(df_list)
+            return(res_list)
         } else {
             # Assume single group (e.g. list of enrichResult for same sample)
             return(list(Default = list(df = get_top_n(combined_df, n_pathways), genes = NULL)))
@@ -529,10 +615,12 @@ process_enrichment_input <- function(x, n_pathways) {
             df_list <- split(df, df$Cluster)
             
             # Map back to genes if possible
-            return(lapply(names(df_list), function(cl_name) {
+            res_list <- lapply(names(df_list), function(cl_name) {
                 genes <- get_genes(x, cl_name)
                 list(df = get_top_n(df_list[[cl_name]], n_pathways), genes = genes)
-            }))
+            })
+            names(res_list) <- names(df_list)
+            return(res_list)
         } else {
             # enrichResult / gseaResult
             genes <- get_genes(x)
@@ -628,7 +716,7 @@ Ensure the response is a valid JSON object. Do not include any markdown formatti
     return(base_prompt)
 }
 
-construct_annotation_prompt <- function(pathways, context, cluster_id, prior = NULL, ppi_network = NULL, fold_change = NULL) {
+construct_annotation_prompt <- function(pathways, context, cluster_id, prior = NULL, ppi_network = NULL, fold_change = NULL, top_genes = NULL) {
     base_prompt <- paste0("You are an expert cell biologist. I have a cell cluster (", cluster_id, ") from a single-cell RNA-seq experiment.")
     
     if (!is.null(context) && context != "") {
@@ -637,29 +725,50 @@ construct_annotation_prompt <- function(pathways, context, cluster_id, prior = N
     
     if (!is.null(prior) && prior != "") {
         base_prompt <- paste0(base_prompt, "\n\nPreliminary Annotation (from automated tool):\n", prior)
-        base_prompt <- paste0(base_prompt, "\n\nEnriched Terms (Mixed Sources: Pathways/TFs):\n", pathways)
-        
-        if (!is.null(ppi_network)) {
-            base_prompt <- paste0(base_prompt, "\n\nPPI Network (Edge List from STRING):\n", ppi_network)
-        }
-        
-        if (!is.null(fold_change)) {
-            base_prompt <- paste0(base_prompt, "\n\nTop Regulated Genes (Log2 Fold Change):\n", fold_change)
-        }
-        
-        base_prompt <- paste0(base_prompt, "\n\nTask:
-Please validate and refine the preliminary annotation based on the enrichment evidence. Use the following logic:
-1. **Source Deconvolution**: Identify enriched Transcription Factors (TFs) vs. Biological Pathways.
-2. **Validation**: Do the pathways support the preliminary label?
-3. **Refinement**: Can you assign a more specific subtype or functional state? (e.g., 'T cells' -> 'Th17' if 'STAT3' and 'IL17 signaling' are enriched).
-4. **Correction**: If the evidence strongly contradicts the preliminary label, propose the correct cell type.
-5. **Network Analysis**: Use the provided PPI connections to identify **functional modules** (e.g., a receptor-ligand pair or a protein complex).
-6. **Integration**: Use these identified modules and TFs to solidify your cell type classification.
+    }
+    
+    base_prompt <- paste0(base_prompt, "\n\nEnriched Terms (Mixed Sources: Pathways/TFs):\n", pathways)
 
-**GROUNDING INSTRUCTION:**
-- Every conclusion must be backed by specific pathways or markers from the input list.
-- In the 'reasoning' field, explicitly mention which terms support your decision.
-- Example: 'Refined to Exhausted T cells because of the presence of PD-1 signaling and LAG3 expression.'
+    if (!is.null(top_genes) && top_genes != "") {
+        base_prompt <- paste0(base_prompt, "\n\nTop Specific/Marker Genes (Highest Fold Change):\n", top_genes)
+    }
+        
+    if (!is.null(ppi_network)) {
+        base_prompt <- paste0(base_prompt, "\n\nPPI Network (Edge List from STRING):\n", ppi_network)
+    }
+    
+    if (!is.null(fold_change)) {
+        base_prompt <- paste0(base_prompt, "\n\nTop Regulated Genes (Log2 Fold Change):\n", fold_change)
+    }
+    
+    # Common Logic Section
+    logic_section <- "
+Use the following logic:
+1. **Source Deconvolution**: Distinguish between Cell Type Markers, Biological Pathways, and Upstream TFs.
+2. **Comparative Analysis (CRITICAL)**: Do NOT just look at the top 1 enriched term.
+    - **Compare Candidates**: Look at the top 3-5 enriched terms. They often represent related cell types (e.g., 'Cytotoxic T cell' vs 'Natural Killer cell').
+    - **Discriminatory Markers**: Use the specific 'Marker Genes' to vote among these candidates.
+    - **Rule of Exclusion**: If the top enriched term is 'Cell Type A', but the gene list contains specific markers for 'Cell Type B' (which is also in the enrichment list, perhaps lower ranked) AND lacks key markers for 'Cell Type A', you must assign 'Cell Type B'.
+    - **Example**: NK cells and Cytotoxic T cells both share cytotoxic genes (GZMB, PRF1). If the top term is 'T cell' but you see NK markers (FGFBP2, FCGR3A) and NO T-cell markers (CD3D, CD3E, CD4, CD8A), the identity is **NK cell**, not T cell.
+3. **Pathway Context**: Use the functional pathways (e.g., KEGG, Reactome) to infer cell state or function (e.g., cytotoxicity, exhaustion).
+4. **Integration**: Combine marker specificity with pathway function to assign a specific Cell Type Label.
+5. **Network Analysis**: Use the provided PPI connections to identify **functional modules**.
+6. **Refinement/Validation**: If a preliminary annotation is provided, validate it against the marker and pathway evidence.
+
+**Confidence Calibration**:
+- **High**: Specific Marker Genes definitively distinguish the label from other top enriched candidates.
+- **Medium**: Strong shared markers/pathways, but discriminatory markers are weak or absent.
+- **Low**: Conflicting evidence.
+"
+
+    if (!is.null(prior) && prior != "") {
+        base_prompt <- paste0(base_prompt, "\n\nTask:
+Please validate and refine the preliminary annotation based on the enrichment and marker evidence.", logic_section, "
+
+**GROUNDING INSTRUCTION (STRICT):**
+- **NO HALLUCINATION**: Do not invent markers or pathways not present in the input.
+- **CITATION REQUIRED**: Every conclusion must be explicitly backed by specific pathways or markers from the provided lists.
+- In the 'reasoning' field, you MUST cite the specific terms that support your decision (e.g., 'Label assigned due to marker X and pathway Y').
 
 Provide the result as a JSON object with the following keys:
 - cell_type: The final identified cell type label (refined or corrected).
@@ -673,28 +782,12 @@ Provide the result as a JSON object with the following keys:
 
 Ensure the response is a valid JSON object. Do not include any markdown formatting (like ```json).")
     } else {
-        base_prompt <- paste0(base_prompt, "\n\nEnriched Terms (Mixed Sources: Pathways/TFs):\n", pathways)
-        
-        if (!is.null(ppi_network)) {
-            base_prompt <- paste0(base_prompt, "\n\nPPI Network (Edge List from STRING):\n", ppi_network)
-        }
-        
-        if (!is.null(fold_change)) {
-            base_prompt <- paste0(base_prompt, "\n\nTop Regulated Genes (Log2 Fold Change):\n", fold_change)
-        }
-        
-        base_prompt <- paste0(base_prompt, "\n\nBased on these enrichment results, identify the cell type of this cluster. 
-Use the following logic:
-1. **Source Deconvolution**: Distinguish between Cell Type Markers, Biological Pathways, and Upstream TFs.
-2. Analyze the specific marker genes or cell type signatures present in the terms.
-3. Analyze the functional pathways (e.g., KEGG, Reactome) to infer cell state or function.
-4. Combine these evidences to assign a specific Cell Type Label and, if possible, a functional state (e.g., 'CD8+ T cells - Exhausted').
-5. **Network Analysis**: Use the provided PPI connections to identify **functional modules**.
-6. **Integration**: Use these identified modules and TFs to solidify your cell type classification.
+        base_prompt <- paste0(base_prompt, "\n\nBased on these enrichment results and marker genes, identify the cell type of this cluster.", logic_section, "
 
-**GROUNDING INSTRUCTION:**
-- Do not guess based on weak evidence.
-- Explicitly cite the markers, pathways, or TFs that led to your classification in the 'reasoning' section.
+**GROUNDING INSTRUCTION (STRICT):**
+- **NO HALLUCINATION**: Do not invent markers or pathways not present in the input.
+- **CITATION REQUIRED**: Every conclusion must be explicitly backed by specific pathways or markers from the provided lists.
+- In the 'reasoning' field, you MUST cite the specific terms that support your decision (e.g., 'Label assigned due to marker X and pathway Y').
 
 Provide the result as a JSON object with the following keys:
 - cell_type: The identified cell type label.
@@ -928,6 +1021,13 @@ print.interpretation <- function(x, ...) {
              cat("**Network Evidence:**\n")
              cat(x$network_evidence, "\n\n")
         }
+    }
+    
+    # Fallback if no content printed
+    if (is.null(x$cell_type) && is.null(x$phenotype) && is.null(x$overview) && is.null(x$key_mechanisms)) {
+         cat("No structured interpretation content found.\n")
+         cat("Raw result structure:\n")
+         utils::str(x)
     }
     
     invisible(x)
